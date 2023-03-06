@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'monchat_server.apps.MonchatServerConfig',
     'rest_framework',
+    'channels',
 ]
 
 MIDDLEWARE = [
@@ -76,6 +77,8 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'monchat.wsgi.application'
 
+# ASGI
+ASGI_APPLICATION = "monchat.asgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases

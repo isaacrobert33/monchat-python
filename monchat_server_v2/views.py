@@ -5,28 +5,60 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from .serializers import UserSerializer, MsgSerializer
 from .models import MonchatUser, MonchatMsg
-from .utils import generate_id, add_msg_fields
+from .utils import generate_id, add_msg_fields, check_password, hash_password
 import json
 
 # Create your views here.
 
-class User(APIView):
+class Sigin(APIView):
 
-    def post(self, request, user_id=None):
-        print(request.data)
-        new_user_id = generate_id(prefix="user")
-        p = MonchatUser.objects.create(
-            user_name=request.data["user_name"],
-            user_id=new_user_id,
-            user_icon=request.data["user_icon"]
+    def post(self, request):
+        uname = request.POST["uname"]
+        pwd = request.POST["pwd"]
+
+        user = get_object_or_404(
+            MonchatUser,
+            user_name=uname
         )
-        return Response({"data": "Signed up sucessfully!"}, status=201)
-    
+        
+        if check_password(pwd, user.password):
+            sr = json.loads(serializers.serialize('json', user))
+            return Response({"msg": "Signed in succesfully", "data": sr['fields']}, status=200)
+        else:
+            return Response({"msg": "Invalid credentials"}, status=403)
+
+class Signup(APIView):
+
+    def post(self, request):
+        uname = request.POST["uname"]
+        pwd = request.POST["pwd"]
+        pwd = hash_password(pwd)
+        new_user_id = generate_id(prefix="user")
+
+        try:
+            MonchatUser.objects.create(
+                user_name=uname,
+                user_id=new_user_id,
+                user_icon='user.svg',
+                password=pwd
+            )
+        except:
+            return Response({"msg": "Error signing up"})
+
+        user = get_object_or_404(
+            MonchatUser,
+            user_id=new_user_id
+        )
+        sr = json.loads(serializers.serialize('json', user))
+
+        return Response({"msg": "Signed up sucessfully!", "data": sr['fields']}, status=201)
+
+
+class LatestChats(APIView):
     def get(self, request, user_id):
         user_qset = get_object_or_404(MonchatUser,
                                       user_id=user_id)
-        serializer = json.loads(serializers.serialize('json', [user_qset]))
-       
+        
         contact_user_ids = set([q.msg_recipient.user_id for q in user_qset.msg_sent.all()] + [q.msg_sender.user_id for q in user_qset.msg_received.all()])
         latest_chat_list = []
         
@@ -38,7 +70,7 @@ class User(APIView):
 
         latest_chat_list = [add_msg_fields(q) for q in json.loads(serializers.serialize('json', latest_chat_list))]
 
-        return Response({"user_data": serializer[0]["fields"], "chat_list": latest_chat_list}, status=200)
+        return Response({"msg": "Fetched data successfully", "data": latest_chat_list}, status=200)
 
 class Chats(APIView):
 
@@ -58,11 +90,14 @@ class Chats(APIView):
         return Response({"msg": "Saved chat successfully"}, status=201)
 
     def get(self, request, user_id, recipient):
-        
+        user_data = get_object_or_404(
+            MonchatUser,
+            user_id=user_id
+        )
         conversation_list = MonchatMsg.objects.filter(
                             Q(msg_sender__user_id=recipient) & Q(msg_recipient__user_id=user_id) | Q(msg_recipient__user_id=recipient) & Q(msg_sender__user_id=user_id)
                         )
-        serializer = [add_msg_fields(q) for q in json.loads(serializers.serialize('json', conversation_list))]
+        serializer = [add_msg_fields(q, user_data.id) for q in json.loads(serializers.serialize('json', conversation_list))]
 
         return Response({"data": serializer}, status=200)
 

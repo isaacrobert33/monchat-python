@@ -18,5 +18,5 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('monchat/', include("monchat_server.urls", namespace="monchat_server")),
+    path('monchat/', include("monchat_server_v2.urls", namespace="monchat_server_v2")),
 ]

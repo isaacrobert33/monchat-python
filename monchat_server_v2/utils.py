@@ -13,7 +13,7 @@ def generate_id(prefix: str):
 def serialize_user(queryset):
     data = json.loads(serialize('json', [queryset]))[0]
     data['fields'].pop('password')
-    return data['fields']
+    return {**data['fields'], **{"user_id": data["pk"]}}
 
 def add_msg_fields(data, user_name=None):
     new_data = data["fields"]
@@ -23,7 +23,8 @@ def add_msg_fields(data, user_name=None):
     new_data["msg_time"] = datetime.fromisoformat(new_data["msg_time"]).strftime("%H:%m")
     new_data["msg_sender"] = serialize_user(MonchatUser.objects.get(user_id=new_data["msg_sender"]))
     new_data["msg_recipient"] = rec_data
-    
+    new_data["msg_id"] = data["pk"]
+
     if user_name:
         new_data["direction"] = "outbound" if new_data["msg_sender"]['user_name'] == user_name else "inbound"
         

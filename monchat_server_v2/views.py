@@ -29,7 +29,7 @@ class Sigin(APIView):
         
         if check_password(pwd, user.password):
             sr = serialize_user(user)
-            response = Response({"msg": "Signed in succesfully", "data": {**sr, "user_id": user.user_id}}, status=200)
+            response = Response({"msg": "Signed in succesfully", "data": sr}, status=200)
             response["Access-Control-Allow-Origin"] = "*"
             return response
         else:
@@ -62,7 +62,7 @@ class Signup(APIView):
         )
         sr = serialize_user(user)
 
-        return Response({"msg": "Signed up sucessfully!", "data": {**sr, "user_id": user.user_id}}, status=201)
+        return Response({"msg": "Signed up sucessfully!", "data": sr}, status=201)
 
 class UserData(APIView):
 
@@ -94,7 +94,7 @@ class LatestChats(APIView):
                         ).latest("msg_time")
             latest_chat_list.append(dt)
 
-        latest_chat_list = [add_msg_fields(q) for q in json.loads(serializers.serialize('json', latest_chat_list))]
+        latest_chat_list = [add_msg_fields(q, user_name=user_qset.user_name) for q in json.loads(serializers.serialize('json', latest_chat_list))]
 
         return Response({"msg": "Fetched data successfully", "data": latest_chat_list}, status=200)
 

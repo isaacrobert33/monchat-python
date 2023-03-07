@@ -3,38 +3,49 @@ from django.core import serializers
 from django.db.models import Q
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .serializers import UserSerializer, MsgSerializer
 from .models import MonchatUser, MonchatMsg
-from .utils import generate_id, add_msg_fields, check_password, hash_password
-import json
+from .utils import (
+    generate_id, add_msg_fields, 
+    check_password, hash_password,
+    cors_response, serialize_user
+)
+import json, traceback
 
 # Create your views here.
 
 class Sigin(APIView):
 
+    # @cors_response
     def post(self, request):
-        uname = request.POST["uname"]
-        pwd = request.POST["pwd"]
-
-        user = get_object_or_404(
-            MonchatUser,
-            user_name=uname
-        )
+        uname = request.data["uname"]
+        pwd = request.data["pwd"]
+        
+        try:
+            user = MonchatUser.objects.get(user_name=uname)
+        except:
+            response = Response({"msg": "Invalid credentials"}, status=404)
+            response["Access-Control-Allow-Origin"] = "*"
+            return response
         
         if check_password(pwd, user.password):
-            sr = json.loads(serializers.serialize('json', user))
-            return Response({"msg": "Signed in succesfully", "data": sr['fields']}, status=200)
+            sr = serialize_user(user)
+            response = Response({"msg": "Signed in succesfully", "data": {**sr, "user_id": user.user_id}}, status=200)
+            response["Access-Control-Allow-Origin"] = "*"
+            return response
         else:
-            return Response({"msg": "Invalid credentials"}, status=403)
+            response = Response({"msg": "Invalid credentials"}, status=403)
+            response["Access-Control-Allow-Origin"] = "*"
+            return response
 
 class Signup(APIView):
 
+    @cors_response
     def post(self, request):
-        uname = request.POST["uname"]
-        pwd = request.POST["pwd"]
+        uname = request.data["uname"]
+        pwd = request.data["pwd"]
         pwd = hash_password(pwd)
         new_user_id = generate_id(prefix="user")
-
+        
         try:
             MonchatUser.objects.create(
                 user_name=uname,
@@ -49,12 +60,27 @@ class Signup(APIView):
             MonchatUser,
             user_id=new_user_id
         )
-        sr = json.loads(serializers.serialize('json', user))
+        sr = serialize_user(user)
 
-        return Response({"msg": "Signed up sucessfully!", "data": sr['fields']}, status=201)
+        return Response({"msg": "Signed up sucessfully!", "data": {**sr, "user_id": user.user_id}}, status=201)
 
+class UserData(APIView):
+
+    @cors_response
+    def get(self, request, user_id):
+        try:
+            user = MonchatUser.objects.get(user_id=user_id)
+        except:
+            response = Response({"msg": "Invalid credentials"}, status=404)
+            response["Access-Control-Allow-Origin"] = "*"
+            return response
+        
+        sr = serialize_user(user)
+        return Response({"msg": "Fetched data successfully", "data": sr})
 
 class LatestChats(APIView):
+
+    @cors_response
     def get(self, request, user_id):
         user_qset = get_object_or_404(MonchatUser,
                                       user_id=user_id)
@@ -74,10 +100,11 @@ class LatestChats(APIView):
 
 class Chats(APIView):
 
-    def post(self, request, user_id, recipient):
+    @cors_response
+    def post(self, request, user_name, recipient):
         new_msg_id = generate_id(prefix='chat')
         msg_sender = get_object_or_404(MonchatUser,
-                                      user_id=user_id)
+                                      user_name=user_name)
         msg_recipient = get_object_or_404(MonchatUser,
                                       user_id=recipient)
         p = MonchatMsg.objects.create(
@@ -89,21 +116,23 @@ class Chats(APIView):
 
         return Response({"msg": "Saved chat successfully"}, status=201)
 
-    def get(self, request, user_id, recipient):
+    @cors_response
+    def get(self, request, user_name, recipient):
         user_data = get_object_or_404(
             MonchatUser,
-            user_id=user_id
+            user_name=user_name
         )
         conversation_list = MonchatMsg.objects.filter(
-                            Q(msg_sender__user_id=recipient) & Q(msg_recipient__user_id=user_id) | Q(msg_recipient__user_id=recipient) & Q(msg_sender__user_id=user_id)
-                        )
-        serializer = [add_msg_fields(q, user_data.id) for q in json.loads(serializers.serialize('json', conversation_list))]
+                            Q(msg_sender__user_name=recipient) & Q(msg_recipient__user_name=user_name) | Q(msg_recipient__user_name=recipient) & Q(msg_sender__user_name=user_name)
+                        ).order_by('msg_time')
+        serializer = [add_msg_fields(q, user_name=user_data.user_name) for q in json.loads(serializers.serialize('json', conversation_list))]
 
-        return Response({"data": serializer}, status=200)
+        return Response({"msg": "Fetched data succesfully", "data": serializer}, status=200)
 
 
 class ChatStatus(APIView):
 
+    @cors_response
     def put(self, request, chat_id, status):
         if status == "read":
             new_status = MonchatMsg.MsgStatus.READ
@@ -118,3 +147,13 @@ class ChatStatus(APIView):
 
         return Response({"msg": "Updated successfully"}, status=200)
     
+class CheckUserName(APIView):
+
+    @cors_response
+    def get(self, request, user_name):
+        try:
+            MonchatUser.objects.get(user_name=user_name)
+        except:
+            return Response({"msg": "", "data": {"exists": False}}, status=200)
+        
+        return Response({"msg": "", "data": {"exists": True}}, status=403)

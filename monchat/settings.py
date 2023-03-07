@@ -35,7 +35,7 @@ DEBUG = True
 ALLOWED_HOSTS = ['*']
 CORS_ALLOWED_ORIGINS = ["http://127.0.0.1:8080", "http://127.0.0.1:8000",]
 
-APPEND_SLASH=False
+APPEND_SLASH = False
 
 # Application definition
 
@@ -80,6 +80,14 @@ TEMPLATES = [
         },
     },
 ]
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [('127.0.0.1', 6379)],
+        },
+    }, }
 
 WSGI_APPLICATION = 'monchat.wsgi.application'
 

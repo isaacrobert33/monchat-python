@@ -2,6 +2,7 @@ from django.db import models
 
 # Create your models here.
 
+
 class MonchatUser(models.Model):
 
     user_id = models.SlugField(max_length=256, unique=True, primary_key=True)
@@ -10,10 +11,11 @@ class MonchatUser(models.Model):
     last_name = models.CharField(max_length=200, default=user_name)
     user_icon = models.CharField(max_length=356)
     password = models.TextField(max_length=256, default="<no-password>")
+    online_status = models.BooleanField(default=False)
 
     def default_name(self):
         return self.user_name.upper()
-    
+
     def save(self, *args, **kwargs):
         if not self.first_name:
             self.first_name = self.default_name()
@@ -24,6 +26,7 @@ class MonchatUser(models.Model):
 
     def __str__(self) -> str:
         return self.user_name
+
 
 class MonchatMsg(models.Model):
 
@@ -48,14 +51,15 @@ class MonchatMsg(models.Model):
         related_name='msg_received'
     )
     msg_status = models.CharField(max_length=2,
-                          choices=MsgStatus.choices,
-                          default=MsgStatus.UNDELIVERED)
+                                  choices=MsgStatus.choices,
+                                  default=MsgStatus.UNDELIVERED)
 
     class Meta:
         ordering = ['msg_time']
 
     def __str__(self) -> str:
         return f'<{self.msg_sender}> to <{self.msg_recipient}>'
+
 
 class ProfileUpload(models.Model):
     file = models.FileField(upload_to='profile_assets/%Y/%m/%d/')

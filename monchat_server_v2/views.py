@@ -2,8 +2,9 @@ from django.shortcuts import render, get_object_or_404
 from django.core import serializers
 from django.db.models import Q
 from rest_framework.views import APIView
+from django.views import View
 from rest_framework.response import Response
-from .models import MonchatUser, MonchatMsg
+from .models import MonchatUser, MonchatMsg, ProfileUpload
 from .utils import (
     generate_id, add_msg_fields, 
     check_password, hash_password,
@@ -157,3 +158,17 @@ class CheckUserName(APIView):
             return Response({"msg": "", "data": {"exists": False}}, status=200)
         
         return Response({"msg": "", "data": {"exists": True}}, status=403)
+    
+
+class Upload(APIView):
+
+    def post(self, request, user_name):
+        file = request.FILES.get('file')
+        file.name = f'{user_name}.{file.name.split(".")[1]}'
+
+        print(type(file))
+        profile = ProfileUpload(file=file)
+        profile.save()
+        
+        return Response({"msg": "File upload succesfully"})
+

@@ -6,10 +6,13 @@ from django.views import View
 from rest_framework.response import Response
 from .models import MonchatUser, MonchatMsg, ProfileUpload
 from .utils import (
-    generate_id, add_msg_fields,
-    check_password, hash_password,
-    cors_response, serialize_user,
-    get_chat_socket_id
+    generate_id,
+    add_msg_fields,
+    check_password,
+    hash_password,
+    cors_response,
+    serialize_user,
+    get_chat_socket_id,
 )
 import json
 import traceback
@@ -18,7 +21,6 @@ import traceback
 
 
 class Sigin(APIView):
-
     @cors_response
     def post(self, request):
         uname = request.data["uname"]
@@ -34,7 +36,8 @@ class Sigin(APIView):
         if check_password(pwd, user.password):
             sr = serialize_user(user)
             response = Response(
-                {"msg": "Signed in succesfully", "data": sr}, status=200)
+                {"msg": "Signed in succesfully", "data": sr}, status=200
+            )
             response["Access-Control-Allow-Origin"] = "*"
             return response
         else:
@@ -44,9 +47,10 @@ class Sigin(APIView):
 
 
 class Signup(APIView):
-
     @cors_response
     def post(self, request):
+        fname = request.data["fname"]
+        lname = request.data["lname"]
         uname = request.data["uname"]
         pwd = request.data["pwd"]
         pwd = hash_password(pwd)
@@ -54,25 +58,23 @@ class Signup(APIView):
 
         try:
             MonchatUser.objects.create(
+                first_name=fname,
+                last_name=lname,
                 user_name=uname,
                 user_id=new_user_id,
-                user_icon='user.svg',
-                password=pwd
+                user_icon="user.svg",
+                password=pwd,
             )
         except:
             return Response({"msg": "Error signing up"})
 
-        user = get_object_or_404(
-            MonchatUser,
-            user_id=new_user_id
-        )
+        user = get_object_or_404(MonchatUser, user_id=new_user_id)
         sr = serialize_user(user)
 
         return Response({"msg": "Signed up sucessfully!", "data": sr}, status=201)
 
 
 class UserData(APIView):
-
     @cors_response
     def get(self, request, user_id):
         try:
@@ -87,38 +89,40 @@ class UserData(APIView):
 
 
 class LatestChats(APIView):
-
     @cors_response
     def get(self, request, user_id):
-        user_qset = get_object_or_404(MonchatUser,
-                                      user_id=user_id)
+        user_qset = get_object_or_404(MonchatUser, user_id=user_id)
 
-        contact_user_ids = set([q.msg_recipient.user_id for q in user_qset.msg_sent.all(
-        )] + [q.msg_sender.user_id for q in user_qset.msg_received.all()])
+        contact_user_ids = set(
+            [q.msg_recipient.user_id for q in user_qset.msg_sent.all()]
+            + [q.msg_sender.user_id for q in user_qset.msg_received.all()]
+        )
         latest_chat_list = []
 
         for uid in contact_user_ids:
             dt = MonchatMsg.objects.filter(
-                Q(msg_sender__user_id=uid) & Q(msg_recipient__user_id=user_qset.user_id) | Q(
-                    msg_recipient__user_id=uid) & Q(msg_sender__user_id=user_qset.user_id)
+                Q(msg_sender__user_id=uid) & Q(msg_recipient__user_id=user_qset.user_id)
+                | Q(msg_recipient__user_id=uid)
+                & Q(msg_sender__user_id=user_qset.user_id)
             ).latest("msg_time")
             latest_chat_list.append(dt)
 
-        latest_chat_list = [add_msg_fields(q, user_name=user_qset.user_name) for q in json.loads(
-            serializers.serialize('json', latest_chat_list))]
+        latest_chat_list = [
+            add_msg_fields(q, user_name=user_qset.user_name)
+            for q in json.loads(serializers.serialize("json", latest_chat_list))
+        ]
 
-        return Response({"msg": "Fetched data successfully", "data": latest_chat_list}, status=200)
+        return Response(
+            {"msg": "Fetched data successfully", "data": latest_chat_list}, status=200
+        )
 
 
 class Chats(APIView):
-
     @cors_response
     def post(self, request, user_name, recipient):
-        new_msg_id = generate_id(prefix='chat')
-        msg_sender = get_object_or_404(MonchatUser,
-                                       user_name=user_name)
-        msg_recipient = get_object_or_404(MonchatUser,
-                                          user_id=recipient)
+        new_msg_id = generate_id(prefix="chat")
+        msg_sender = get_object_or_404(MonchatUser, user_name=user_name)
+        msg_recipient = get_object_or_404(MonchatUser, user_id=recipient)
         p = MonchatMsg.objects.create(
             msg_id=new_msg_id,
             msg_body=request.data["msg_body"],
@@ -130,29 +134,32 @@ class Chats(APIView):
 
     @cors_response
     def get(self, request, user_name, recipient):
-        user_data = get_object_or_404(
-            MonchatUser,
-            user_name=user_name
-        )
-        recipient_data = get_object_or_404(
-            MonchatUser,
-            user_name=recipient
-        )
+        user_data = get_object_or_404(MonchatUser, user_name=user_name)
+        recipient_data = get_object_or_404(MonchatUser, user_name=recipient)
         conversation_list = MonchatMsg.objects.filter(
-            Q(msg_sender__user_name=recipient) & Q(msg_recipient__user_name=user_name) | Q(
-                msg_recipient__user_name=recipient) & Q(msg_sender__user_name=user_name)
-        ).order_by('msg_time')
-        serializer = [add_msg_fields(q, user_name=user_data.user_name) for q in json.loads(
-            serializers.serialize('json', conversation_list))]
+            Q(msg_sender__user_name=recipient) & Q(msg_recipient__user_name=user_name)
+            | Q(msg_recipient__user_name=recipient) & Q(msg_sender__user_name=user_name)
+        ).order_by("msg_time")
+        serializer = [
+            add_msg_fields(q, user_name=user_data.user_name)
+            for q in json.loads(serializers.serialize("json", conversation_list))
+        ]
 
         socket_id = get_chat_socket_id(
-            msg_sender=user_data.user_id, msg_recipient=recipient_data.user_id)
+            msg_sender=user_data.user_id, msg_recipient=recipient_data.user_id
+        )
 
-        return Response({"msg": "Fetched data succesfully", "data": serializer, 'socket_id': socket_id}, status=200)
+        return Response(
+            {
+                "msg": "Fetched data succesfully",
+                "data": serializer,
+                "socket_id": socket_id,
+            },
+            status=200,
+        )
 
 
 class ChatStatus(APIView):
-
     @cors_response
     def put(self, request, chat_id, status):
         if status == "read":
@@ -170,7 +177,6 @@ class ChatStatus(APIView):
 
 
 class CheckUserName(APIView):
-
     @cors_response
     def get(self, request, user_name):
         try:
@@ -182,9 +188,8 @@ class CheckUserName(APIView):
 
 
 class Upload(APIView):
-
     def post(self, request, user_name):
-        file = request.FILES.get('file')
+        file = request.FILES.get("file")
         file.name = f'{user_name}.{file.name.split(".")[1]}'
 
         print(type(file))

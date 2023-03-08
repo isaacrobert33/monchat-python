@@ -13,31 +13,39 @@ import uuid
 
 
 def generate_id(prefix: str):
-    return f'{prefix}_{uuid.uuid4().hex}'
+    return f"{prefix}_{uuid.uuid4().hex}"
 
 
 def serialize_user(queryset):
-    data = json.loads(serialize('json', [queryset]))[0]
-    data['fields'].pop('password')
-    return {**data['fields'], **{"user_id": data["pk"]}}
+    data = json.loads(serialize("json", [queryset]))[0]
+    data["fields"].pop("password")
+    return {**data["fields"], **{"user_id": data["pk"]}}
 
 
 def add_msg_fields(data, user_name=None):
     new_data = data["fields"]
-    rec_data = serialize_user(MonchatUser.objects.get(
-        user_id=new_data["msg_recipient"]))
+    rec_data = serialize_user(
+        MonchatUser.objects.get(user_id=new_data["msg_recipient"])
+    )
     new_data["msg_time"] = new_data["msg_time"].split(".")[0]
-    new_data["msg_date"] = datetime.fromisoformat(
-        new_data["msg_time"]).strftime("%Y:%m:%d")
-    new_data["msg_time"] = datetime.fromisoformat(
-        new_data["msg_time"]).strftime("%H:%M")
+    new_data["msg_date"] = datetime.fromisoformat(new_data["msg_time"]).strftime(
+        "%Y:%m:%d"
+    )
+    new_data["msg_time"] = datetime.fromisoformat(new_data["msg_time"]).strftime(
+        "%H:%M"
+    )
     new_data["msg_sender"] = serialize_user(
-        MonchatUser.objects.get(user_id=new_data["msg_sender"]))
+        MonchatUser.objects.get(user_id=new_data["msg_sender"])
+    )
     new_data["msg_recipient"] = rec_data
     new_data["msg_id"] = data["pk"]
 
     if user_name:
-        new_data["direction"] = "outbound" if new_data["msg_sender"]['user_name'] == user_name else "inbound"
+        new_data["direction"] = (
+            "outbound"
+            if new_data["msg_sender"]["user_name"] == user_name
+            else "inbound"
+        )
 
     return new_data
 
@@ -48,26 +56,27 @@ def get_hexdigest(algorithm, salt, raw_password):
     using the given algorithm ('md5', 'sha1' or 'crypt').
     """
     raw_password, salt = smart_str(raw_password), smart_str(salt)
-    if algorithm == 'crypt':
+    if algorithm == "crypt":
         try:
             import crypt
         except ImportError:
             raise ValueError(
-                '"crypt" password algorithm not supported in this environment')
+                '"crypt" password algorithm not supported in this environment'
+            )
         return crypt.crypt(raw_password, salt)
 
-    if algorithm == 'md5':
+    if algorithm == "md5":
         return hashlib.md5(salt + raw_password).hexdigest()
-    elif algorithm == 'sha1':
+    elif algorithm == "sha1":
         return hashlib.sha1(salt.encode() + raw_password.encode()).hexdigest()
     raise ValueError("Got unknown password algorithm type in password.")
 
 
 def hash_password(raw_password):
-    algo = 'sha1'
+    algo = "sha1"
     salt = get_hexdigest(algo, str(random.random()), str(random.random()))[:5]
     hsh = get_hexdigest(algo, salt, raw_password)
-    return '%s$%s$%s' % (algo, salt, hsh)
+    return "%s$%s$%s" % (algo, salt, hsh)
 
 
 def check_password(raw_password, enc_password):
@@ -75,7 +84,7 @@ def check_password(raw_password, enc_password):
     Returns a boolean of whether the raw_password was correct. Handles
     encryption formats behind the scenes.
     """
-    algo, salt, hsh = enc_password.split('$')
+    algo, salt, hsh = enc_password.split("$")
     return hsh == get_hexdigest(algo, salt, raw_password)
 
 
@@ -90,8 +99,13 @@ def cors_response(func):
 
 
 def update_msg_status(msg_sender, msg_recipient, msg_time):
-    msgs = MonchatMsg.objects.filter(Q(msg_status=MonchatMsg.MsgStatus.UNDELIVERED) | Q(
-        msg_status=MonchatMsg.MsgStatus.DELIVERED), msg_time__lte=msg_time, msg_recipient=msg_recipient, msg_sender=msg_sender)
+    msgs = MonchatMsg.objects.filter(
+        Q(msg_status=MonchatMsg.MsgStatus.UNDELIVERED)
+        | Q(msg_status=MonchatMsg.MsgStatus.DELIVERED),
+        msg_time__lte=msg_time,
+        msg_recipient=msg_recipient,
+        msg_sender=msg_sender,
+    )
     for msg in msgs:
         msg.msg_status = MonchatMsg.MsgStatus.READ
         msg.save()
@@ -100,10 +114,10 @@ def update_msg_status(msg_sender, msg_recipient, msg_time):
 
 
 def save_msg_to_db(msg_body, msg_sender, msg_recipient, msg_time):
-    new_msg_id = generate_id(prefix='chat')
+    new_msg_id = generate_id(prefix="chat")
     msg_recipient = MonchatUser.objects.get(user_name=msg_recipient.strip("'"))
     msg_sender = MonchatUser.objects.get(user_name=msg_sender.strip("'"))
-    msg_time = datetime.fromisoformat(msg_time.split('.')[0])
+    msg_time = datetime.fromisoformat(msg_time.split(".")[0])
 
     try:
         MonchatMsg.objects.create(
@@ -111,14 +125,15 @@ def save_msg_to_db(msg_body, msg_sender, msg_recipient, msg_time):
             msg_body=msg_body,
             msg_sender=msg_sender,
             msg_recipient=msg_recipient,
-            msg_time=msg_time
+            msg_time=msg_time,
         )
     except:
         print(traceback.format_exc())
         return False
 
-    update_msg_status(msg_recipient=msg_recipient,
-                      msg_sender=msg_sender, msg_time=msg_time)
+    update_msg_status(
+        msg_recipient=msg_recipient, msg_sender=msg_sender, msg_time=msg_time
+    )
     return True
 
 

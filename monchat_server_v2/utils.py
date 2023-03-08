@@ -16,17 +16,23 @@ def generate_id(prefix: str):
     return f"{prefix}_{uuid.uuid4().hex}"
 
 
-def serialize_user(queryset):
+def serialize_user(queryset, extra={}):
     data = json.loads(serialize("json", [queryset]))[0]
     data["fields"].pop("password")
-    return {**data["fields"], **{"user_id": data["pk"]}}
+    return {**data["fields"], **{"user_id": data["pk"], **extra}}
 
 
 def add_msg_fields(data, user_name=None):
     new_data = data["fields"]
-    rec_data = serialize_user(
-        MonchatUser.objects.get(user_id=new_data["msg_recipient"])
-    )
+    rec_data = MonchatUser.objects.get(user_id=new_data["msg_recipient"])
+    profile_data = rec_data.profile.first()
+
+    if not profile_data:
+        user_icon = "user.svg"
+    else:
+        user_icon = profile_data.file.name
+
+    rec_data = serialize_user(rec_data, {"user_icon": user_icon})
     new_data["msg_time"] = new_data["msg_time"].split(".")[0]
     new_data["msg_date"] = datetime.fromisoformat(new_data["msg_time"]).strftime(
         "%Y:%m:%d"
@@ -34,9 +40,14 @@ def add_msg_fields(data, user_name=None):
     new_data["msg_time"] = datetime.fromisoformat(new_data["msg_time"]).strftime(
         "%H:%M"
     )
-    new_data["msg_sender"] = serialize_user(
-        MonchatUser.objects.get(user_id=new_data["msg_sender"])
-    )
+    ms = MonchatUser.objects.get(user_id=new_data["msg_sender"])
+    profile_data = ms.profile.first()
+    if profile_data:
+        user_icon = profile_data.file.name
+    else:
+        user_icon = "user.svg"
+
+    new_data["msg_sender"] = serialize_user(ms, {"user_icon": user_icon})
     new_data["msg_recipient"] = rec_data
     new_data["msg_id"] = data["pk"]
 

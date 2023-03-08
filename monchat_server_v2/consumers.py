@@ -1,10 +1,12 @@
-import json
+import json, traceback
 from .models import MonchatMsg
 from .utils import save_msg_to_db
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from .models import MonchatUser, MonchatMsg
-from django.contrib.auth.models import User
+from django.db.models import Q
+from .utils import generate_id
+from datetime import datetime
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -23,13 +25,50 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_send(
             self.room_group_name, {"type": "chat_message", **msg_data}
         )
-        save_msg_to_db(**msg_data)
+
+        await self.save_msg_to_db(**msg_data)
 
     async def chat_message(self, event):
         await self.send(text_data=json.dumps(event))
 
     async def disconnect(self, code):
         self.channel_layer.group_discard(self.room_group_name, self.channel_name)
+
+    @database_sync_to_async
+    def save_msg_to_db(self, msg_body, msg_sender, msg_recipient, msg_time):
+        new_msg_id = generate_id(prefix="chat")
+        msg_recipient = MonchatUser.objects.get(user_name=msg_recipient.strip("'"))
+        msg_sender = MonchatUser.objects.get(user_name=msg_sender.strip("'"))
+        msg_time = datetime.fromisoformat(msg_time.split(".")[0])
+
+        try:
+            MonchatMsg.objects.create(
+                msg_id=new_msg_id,
+                msg_body=msg_body,
+                msg_sender=msg_sender,
+                msg_recipient=msg_recipient,
+                msg_time=msg_time,
+            )
+        except:
+            print(traceback.format_exc())
+
+        self.update_msg_status(
+            msg_recipient=msg_recipient, msg_sender=msg_sender, msg_time=msg_time
+        )
+
+    def update_msg_status(self, msg_sender, msg_recipient, msg_time):
+        msgs = MonchatMsg.objects.filter(
+            Q(msg_status=MonchatMsg.MsgStatus.UNDELIVERED)
+            | Q(msg_status=MonchatMsg.MsgStatus.DELIVERED),
+            msg_time__lte=msg_time,
+            msg_recipient=msg_recipient,
+            msg_sender=msg_sender,
+        )
+        for msg in msgs:
+            msg.msg_status = MonchatMsg.MsgStatus.READ
+            msg.save()
+
+        print("Updated", msgs.count())
 
 
 class OnlineStatusConsumer(AsyncWebsocketConsumer):
@@ -41,18 +80,20 @@ class OnlineStatusConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data=None, bytes_data=None):
         data = json.loads(text_data)
-        username = data["username"]
+        user_name = data["user_name"]
         connection_type = data["type"]
-        print(connection_type)
-        await self.change_online_status(username, connection_type)
+        print(user_name, connection_type)
+        await self.change_online_status(user_name, connection_type)
 
     async def send_onlineStatus(self, event):
         data = json.loads(event.get("value"))
-        username = data["username"]
+        user_name = data["user_name"]
         online_status = data["status"]
 
         await self.send(
-            text_data=json.dumps({"username": username, "online_status": online_status})
+            text_data=json.dumps(
+                {"user_name": user_name, "online_status": online_status}
+            )
         )
 
     async def disconnect(self, message):
@@ -68,6 +109,7 @@ class OnlineStatusConsumer(AsyncWebsocketConsumer):
         else:
             userprofile.online_status = False
             userprofile.save()
+        print("Status updated")
 
 
 # class NotificationConsumer(AsyncWebsocketConsumer):

@@ -85,7 +85,16 @@ class UserData(APIView):
             return response
 
         sr = serialize_user(user)
-        return Response({"msg": "Fetched data successfully", "data": sr})
+        try:
+            user_icon = user.profile.all().first().file.name
+            print(user_icon)
+        except:
+            print(traceback.format_exc())
+            user_icon = "user.svg"
+
+        return Response(
+            {"msg": "Fetched data successfully", "data": {**sr, "user_icon": user_icon}}
+        )
 
 
 class LatestChats(APIView):
@@ -189,11 +198,12 @@ class CheckUserName(APIView):
 
 class Upload(APIView):
     def post(self, request, user_name):
+        user = MonchatUser.objects.get(user_name=user_name)
         file = request.FILES.get("file")
         file.name = f'{user_name}.{file.name.split(".")[1]}'
+        fileID = generate_id("file")
 
-        print(type(file))
-        profile = ProfileUpload(file=file)
+        profile = ProfileUpload(file_id=fileID, file=file, user_id=user)
         profile.save()
 
         return Response({"msg": "File upload succesfully"})

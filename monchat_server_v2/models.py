@@ -60,8 +60,18 @@ class MonchatMsg(models.Model):
 
 
 class ProfileUpload(models.Model):
+    file_id = models.SlugField(
+        max_length=256, unique=True, primary_key=True, default="<file_id>"
+    )
     file = models.FileField(upload_to="%Y/%m/%d/")
     uploaded_at = models.DateTimeField(auto_now_add=True)
+    user_id = models.ForeignKey(
+        MonchatUser,
+        to_field="user_id",
+        on_delete=models.CASCADE,
+        related_name="profile",
+        default=MonchatUser,
+    )
 
     def save(self, *args, **kwargs):
         return super(ProfileUpload, self).save(*args, **kwargs)

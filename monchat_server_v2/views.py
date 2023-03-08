@@ -7,12 +7,13 @@ from rest_framework.response import Response
 from .models import MonchatUser, MonchatMsg, ProfileUpload
 from .utils import (
     generate_id,
-    add_msg_fields,
+    map_msg_fields,
     check_password,
     hash_password,
     cors_response,
     serialize_user,
     get_chat_socket_id,
+    map_unread_count,
 )
 import json
 import traceback
@@ -116,10 +117,11 @@ class LatestChats(APIView):
             ).latest("msg_time")
             latest_chat_list.append(dt)
 
-        latest_chat_list = [
-            add_msg_fields(q, user_name=user_qset.user_name)
-            for q in json.loads(serializers.serialize("json", latest_chat_list))
-        ]
+        latest_chat_list = map_msg_fields(
+            [q for q in json.loads(serializers.serialize("json", latest_chat_list))],
+            user_name=user_qset.user_name,
+        )
+        latest_chat_list = map_unread_count(latest_chat_list, user_id=user_id)
 
         return Response(
             {"msg": "Fetched data successfully", "data": latest_chat_list}, status=200
@@ -149,10 +151,12 @@ class Chats(APIView):
             Q(msg_sender__user_name=recipient) & Q(msg_recipient__user_name=user_name)
             | Q(msg_recipient__user_name=recipient) & Q(msg_sender__user_name=user_name)
         ).order_by("msg_time")
-        serializer = [
-            add_msg_fields(q, user_name=user_data.user_name)
-            for q in json.loads(serializers.serialize("json", conversation_list))
-        ]
+        excl = ["msg_recipient", "msg_sender", "msg_date"]
+        serializer = map_msg_fields(
+            [q for q in json.loads(serializers.serialize("json", conversation_list))],
+            user_name=user_data.user_name,
+            excludes=excl,
+        )
 
         socket_id = get_chat_socket_id(
             msg_sender=user_data.user_id, msg_recipient=recipient_data.user_id

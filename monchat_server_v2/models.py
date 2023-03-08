@@ -11,6 +11,7 @@ class MonchatUser(models.Model):
     user_icon = models.CharField(max_length=356)
     password = models.TextField(max_length=256, default="<no-password>")
     online_status = models.BooleanField(default=False)
+    last_seen = models.DateTimeField(auto_now_add=True)
 
     def default_name(self):
         return self.user_name.upper()
@@ -36,6 +37,7 @@ class MonchatMsg(models.Model):
     msg_id = models.SlugField(max_length=256, unique=True, primary_key=True)
     msg_body = models.TextField()
     msg_time = models.DateTimeField(auto_now_add=True)
+    read_time = models.DateTimeField(auto_now_add=True)
     msg_sender = models.ForeignKey(
         MonchatUser,
         to_field="user_id",

@@ -22,43 +22,47 @@ def serialize_user(queryset, extra={}):
     return {**data["fields"], **{"user_id": data["pk"], **extra}}
 
 
-def add_msg_fields(data, user_name=None):
-    new_data = data["fields"]
-    rec_data = MonchatUser.objects.get(user_id=new_data["msg_recipient"])
-    profile_data = rec_data.profile.first()
+def map_msg_fields(msg_data: list, user_name: str, excludes=[]) -> list:
+    mapped = []
 
-    if not profile_data:
-        user_icon = "user.svg"
-    else:
-        user_icon = profile_data.file.name
+    for data in msg_data:
+        new_data = data["fields"]
+        recp_data = MonchatUser.objects.get(user_id=new_data["msg_recipient"])
+        profile_data = recp_data.profile.first()
+        recp_user_icon = "user.svg" if not profile_data else profile_data.file.name
 
-    rec_data = serialize_user(rec_data, {"user_icon": user_icon})
-    new_data["msg_time"] = new_data["msg_time"].split(".")[0]
-    new_data["msg_date"] = datetime.fromisoformat(new_data["msg_time"]).strftime(
-        "%Y:%m:%d"
-    )
-    new_data["msg_time"] = datetime.fromisoformat(new_data["msg_time"]).strftime(
-        "%H:%M"
-    )
-    ms = MonchatUser.objects.get(user_id=new_data["msg_sender"])
-    profile_data = ms.profile.first()
-    if profile_data:
-        user_icon = profile_data.file.name
-    else:
-        user_icon = "user.svg"
-
-    new_data["msg_sender"] = serialize_user(ms, {"user_icon": user_icon})
-    new_data["msg_recipient"] = rec_data
-    new_data["msg_id"] = data["pk"]
-
-    if user_name:
-        new_data["direction"] = (
-            "outbound"
-            if new_data["msg_sender"]["user_name"] == user_name
-            else "inbound"
+        recp_data = serialize_user(recp_data, {"user_icon": recp_user_icon})
+        new_data["msg_time"] = new_data["msg_time"].split(".")[0]
+        new_data["msg_date"] = datetime.fromisoformat(new_data["msg_time"]).strftime(
+            "%Y:%m:%d"
         )
+        new_data["msg_time"] = datetime.fromisoformat(new_data["msg_time"]).strftime(
+            "%H:%M"
+        )
+        sender_data = MonchatUser.objects.get(user_id=new_data["msg_sender"])
+        profile_data = sender_data.profile.first()
+        sender_user_icon = profile_data.file.name if profile_data else "user.svg"
 
-    return new_data
+        new_data["msg_sender"] = serialize_user(
+            sender_data, {"user_icon": sender_user_icon}
+        )
+        new_data["msg_recipient"] = recp_data
+        new_data["msg_id"] = data["pk"]
+
+        if user_name:
+            new_data["direction"] = (
+                "outbound"
+                if new_data["msg_sender"]["user_name"] == user_name
+                else "inbound"
+            )
+
+        # Removing excluded fields
+        for f in excludes:
+            new_data.pop(f)
+
+        mapped.append(new_data)
+
+    return mapped
 
 
 def get_hexdigest(algorithm, salt, raw_password):
@@ -151,3 +155,24 @@ def save_msg_to_db(msg_body, msg_sender, msg_recipient, msg_time):
 def get_chat_socket_id(msg_sender, msg_recipient):
     socket_id = "__".join(sorted([msg_sender, msg_recipient]))
     return socket_id
+
+
+def map_unread_count(data: list, user_id):
+    mapped = []
+
+    for msg in data:
+        recp = (
+            msg["msg_sender"]["user_id"]
+            if msg["direction"] == "inbound"
+            else msg["msg_recipient"]["user_name"]
+        )
+        unread_count = MonchatMsg.objects.filter(
+            Q(msg_status=MonchatMsg.MsgStatus.UNDELIVERED)
+            | Q(msg_status=MonchatMsg.MsgStatus.DELIVERED),
+            msg_sender__user_id=recp,
+            msg_recipient__user_id=user_id,
+        ).count()
+        msg["unread_count"] = unread_count
+        mapped.append(msg)
+
+    return mapped

@@ -215,10 +215,16 @@ class Upload(APIView):
 
 class UserList(APIView):
     def get(self, request):
-        data = serializers.serialize("json", MonchatUser.objects.all())
+        users = MonchatUser.objects.all()
+        data = json.loads(serializers.serialize("json", users))
 
-        for d in data:
-            d.pop("password")
-            data[data.index(d)] = {**d["fields"], "user_id": d["pk"]}
+        for i, d in enumerate(data):
+            d["fields"].pop("password")
+            user_icon = (
+                users[i].profile.first().file.name
+                if users[i].profile.first()
+                else "user.svg"
+            )
+            data[i] = {**d["fields"], "user_id": d["pk"], "user_icon": user_icon}
 
         return Response({"msg": "Fetched data succesfully", "data": data}, status=200)

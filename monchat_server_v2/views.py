@@ -211,3 +211,14 @@ class Upload(APIView):
         profile.save()
 
         return Response({"msg": "File upload succesfully"})
+
+
+class UserList(APIView):
+    def get(self, request):
+        data = serializers.serialize("json", MonchatUser.objects.all())
+
+        for d in data:
+            d.pop("password")
+            data[data.index(d)] = {**d["fields"], "user_id": d["pk"]}
+
+        return Response({"msg": "Fetched data succesfully", "data": data}, status=200)

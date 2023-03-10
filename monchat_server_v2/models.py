@@ -12,6 +12,7 @@ class MonchatUser(models.Model):
     password = models.TextField(max_length=256, default="<no-password>")
     online_status = models.BooleanField(default=False)
     last_seen = models.DateTimeField(auto_now_add=True)
+    user_bio = models.TextField(max_length=150, default="Hey there, I'm using MonChat")
 
     def default_name(self):
         return self.user_name.upper()

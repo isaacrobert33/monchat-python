@@ -9,6 +9,8 @@ from .views import (
     UserData,
     Upload,
     UserList,
+    UserStatus,
+    ResetPwd,
 )
 
 app_name = "monchat_server_v2"
@@ -28,5 +30,7 @@ urlpatterns = [
         "check_username/<str:user_name>/", CheckUserName.as_view(), name="check_uname"
     ),
     path("profile_upload/<slug:user_name>/", Upload.as_view(), name="profile_upload"),
-    path("users/", UserList.as_view(), name="user_list"),
+    path("users/<slug:user_id>/", UserList.as_view(), name="user_list"),
+    path("user_status/<slug:user_id>/", UserStatus.as_view(), name="user_status"),
+    path("reset_password/", ResetPwd.as_view(), name="pwd_reset"),
 ]

@@ -35,7 +35,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
         self.channel_layer.group_discard(self.room_group_name, self.channel_name)
 
     @database_sync_to_async
-    def save_msg_to_db(self, msg_id, msg_body, msg_sender, msg_recipient, msg_time):
+    def save_msg_to_db(
+        self, msg_id, msg_body, msg_sender, msg_recipient, msg_time, **kwargs
+    ):
         msg_recipient = MonchatUser.objects.get(user_name=msg_recipient.strip("'"))
         msg_sender = MonchatUser.objects.get(user_name=msg_sender.strip("'"))
         msg_time = datetime.fromisoformat(msg_time.split(".")[0])

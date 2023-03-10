@@ -88,7 +88,15 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [("127.0.0.1", 6379)],
+            "hosts": [
+                # (
+                #     "redis-16280.c16.us-east-1-3.ec2.cloud.redislabs.com",
+                #     16280,
+                # ),
+                ("127.0.0.1", 6379),
+            ],
+            # "password": "hKMne8gN6T7rgW9MQLyJhmyV24A5n8hA"
+            # "password": os.getenv("REDIS_PASSWORD"),
         },
     },
 }

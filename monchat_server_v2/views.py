@@ -30,21 +30,25 @@ class Sigin(APIView):
         try:
             user = MonchatUser.objects.get(user_name=uname)
         except:
-            response = Response({"msg": "Invalid credentials"}, status=404)
-            response["Access-Control-Allow-Origin"] = "*"
-            return response
+            return Response({"msg": "Invalid credentials"}, status=404)
+
+        try:
+            user_icon = user.profile.latest("uploaded_at").file.name
+        except:
+            user_icon = "user.svg"
 
         if check_password(pwd, user.password):
             sr = serialize_user(user)
-            response = Response(
-                {"msg": "Signed in succesfully", "data": sr}, status=200
+
+            return Response(
+                {
+                    "msg": "Signed in succesfully",
+                    "data": {**sr, "user_icon": user_icon},
+                },
+                status=200,
             )
-            response["Access-Control-Allow-Origin"] = "*"
-            return response
         else:
-            response = Response({"msg": "Invalid credentials"}, status=403)
-            response["Access-Control-Allow-Origin"] = "*"
-            return response
+            return Response({"msg": "Invalid credentials"}, status=403)
 
 
 class Signup(APIView):
@@ -75,7 +79,22 @@ class Signup(APIView):
         return Response({"msg": "Signed up sucessfully!", "data": sr}, status=201)
 
 
+class ResetPwd(APIView):
+    def post(self, request):
+        uname, pwd = request.data.get("uname"), request.data["pwd"]
+        user = get_object_or_404(MonchatUser, user_name=uname)
+        user.password = hash_password(pwd)
+        user.save()
+
+        return Response(
+            {"msg": "Password reset successfully", "data": serialize_user(user)},
+            status=200,
+        )
+
+
 class UserData(APIView):
+    http_method_names = ["put", "get"]
+
     @cors_response
     def get(self, request, user_id):
         try:
@@ -87,14 +106,33 @@ class UserData(APIView):
 
         sr = serialize_user(user)
         try:
-            user_icon = user.profile.all().first().file.name
-            print(user_icon)
+            user_icon = user.profile.latest("uploaded_at").file.name
         except:
-            print(traceback.format_exc())
             user_icon = "user.svg"
 
         return Response(
             {"msg": "Fetched data successfully", "data": {**sr, "user_icon": user_icon}}
+        )
+
+    def put(self, request, user_id):
+        user = get_object_or_404(MonchatUser, user_id=user_id)
+
+        user.first_name = request.data.get("fname", user.first_name)
+        user.last_name = request.data.get("lname", user.last_name)
+        user.user_bio = request.data.get("user_bio", user.user_bio)
+        user.save()
+
+        try:
+            user_icon = user.profile.latest("uploaded_at").file.name
+        except:
+            user_icon = "user.svg"
+
+        return Response(
+            {
+                "msg": "User profile updated succesfully",
+                "data": {**serialize_user(user), "user_icon": user_icon},
+            },
+            status=200,
         )
 
 
@@ -156,6 +194,7 @@ class Chats(APIView):
             [q for q in json.loads(serializers.serialize("json", conversation_list))],
             user_name=user_data.user_name,
             excludes=excl,
+            sort=False,
         )
 
         socket_id = get_chat_socket_id(
@@ -189,6 +228,20 @@ class ChatStatus(APIView):
         return Response({"msg": "Updated successfully"}, status=200)
 
 
+class UserStatus(APIView):
+    def get(self, request, user_id):
+        user = get_object_or_404(MonchatUser, user_id=user_id)
+        return Response(
+            {
+                "msg": "",
+                "data": {
+                    "online_status": user.online_status,
+                    "last_seen": user.last_seen,
+                },
+            }
+        )
+
+
 class CheckUserName(APIView):
     @cors_response
     def get(self, request, user_name):
@@ -214,15 +267,15 @@ class Upload(APIView):
 
 
 class UserList(APIView):
-    def get(self, request):
-        users = MonchatUser.objects.all()
+    def get(self, request, user_id):
+        users = MonchatUser.objects.all().exclude(user_id=user_id)
         data = json.loads(serializers.serialize("json", users))
 
         for i, d in enumerate(data):
             d["fields"].pop("password")
             user_icon = (
-                users[i].profile.first().file.name
-                if users[i].profile.first()
+                users[i].profile.latest("uploaded_at").file.name
+                if users[i].profile.latest("uploaded_at")
                 else "user.svg"
             )
             data[i] = {**d["fields"], "user_id": d["pk"], "user_icon": user_icon}

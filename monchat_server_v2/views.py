@@ -189,12 +189,13 @@ class Chats(APIView):
             Q(msg_sender__user_name=recipient) & Q(msg_recipient__user_name=user_name)
             | Q(msg_recipient__user_name=recipient) & Q(msg_sender__user_name=user_name)
         ).order_by("msg_time")
-        excl = ["msg_recipient", "msg_sender", "msg_date"]
+        excl = ["msg_date"]
         serializer = map_msg_fields(
             [q for q in json.loads(serializers.serialize("json", conversation_list))],
             user_name=user_data.user_name,
             excludes=excl,
             sort=False,
+            extra_user_data=False,
         )
 
         socket_id = get_chat_socket_id(

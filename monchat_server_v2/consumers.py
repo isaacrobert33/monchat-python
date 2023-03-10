@@ -20,7 +20,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data=None, bytes_data=None):
         msg_data = json.loads(text_data)
-        msg_data["msg_id"] = generate_id(prefix="chat")
 
         await self.channel_layer.group_send(
             self.room_group_name, {"type": "chat_message", **msg_data}
@@ -55,24 +54,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
             )
         except:
             print(traceback.format_exc())
-
-        self.update_msg_status(
-            msg_recipient=msg_recipient, msg_sender=msg_sender, msg_time=msg_time
-        )
-
-    def update_msg_status(self, msg_sender, msg_recipient, msg_time):
-        msgs = MonchatMsg.objects.filter(
-            Q(msg_status=MonchatMsg.MsgStatus.UNDELIVERED)
-            | Q(msg_status=MonchatMsg.MsgStatus.DELIVERED),
-            msg_time__lte=msg_time,
-            msg_recipient=msg_recipient,
-            msg_sender=msg_sender,
-        )
-        for msg in msgs:
-            msg.msg_status = MonchatMsg.MsgStatus.READ
-            msg.save()
-
-        print("Updated", msgs.count())
 
 
 class OnlineStatusConsumer(AsyncWebsocketConsumer):
@@ -160,13 +141,30 @@ class ReadRecieptConsumer(AsyncWebsocketConsumer):
         self.channel_layer.group_discard(self.room_group_name, self.channel_name)
 
     @database_sync_to_async
-    def change_msg_status(self, msg_id, msg_status, read_time):
+    def change_msg_status(self, msg_id, msg_status, read_time, **kwargs):
         msg_data = MonchatMsg.objects.get(msg_id=msg_id)
         msg_data.msg_status = msg_status
         msg_data.read_time = datetime.fromisoformat(read_time.split(".")[0])
         msg_data.save()
 
-        print("Msg status changed", msg_status)
+        if kwargs:
+            self.update_msg_status(
+                msg_recipient=kwargs.get("msg_recipient"),
+                msg_sender=kwargs.get("msg_sender"),
+                msg_time=msg_data.msg_time,
+            )
+
+    def update_msg_status(self, msg_sender, msg_recipient, msg_time):
+        msgs = MonchatMsg.objects.filter(
+            Q(msg_status=MonchatMsg.MsgStatus.UNDELIVERED)
+            | Q(msg_status=MonchatMsg.MsgStatus.DELIVERED),
+            msg_time__lte=msg_time,
+            msg_recipient__user_name=msg_recipient,
+            msg_sender__user_name=msg_sender,
+        )
+        for msg in msgs:
+            msg.msg_status = MonchatMsg.MsgStatus.READ
+            msg.save()
 
 
 # class NotificationConsumer(AsyncWebsocketConsumer):

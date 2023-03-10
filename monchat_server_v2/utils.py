@@ -22,7 +22,9 @@ def serialize_user(queryset, extra={}):
     return {**data["fields"], **{"user_id": data["pk"], **extra}}
 
 
-def map_msg_fields(msg_data: list, user_name: str, excludes=[], sort=True) -> list:
+def map_msg_fields(
+    msg_data: list, user_name: str, excludes=[], sort=True, extra_user_data=True
+) -> list:
     mapped = []
     msg_data = (
         sorted(
@@ -53,6 +55,7 @@ def map_msg_fields(msg_data: list, user_name: str, excludes=[], sort=True) -> li
         new_data["msg_sender"] = serialize_user(
             sender_data, {"user_icon": sender_user_icon}
         )
+
         new_data["msg_recipient"] = recp_data
         new_data["msg_id"] = data["pk"]
 
@@ -62,6 +65,10 @@ def map_msg_fields(msg_data: list, user_name: str, excludes=[], sort=True) -> li
                 if new_data["msg_sender"]["user_name"] == user_name
                 else "inbound"
             )
+
+        if not extra_user_data:
+            new_data["msg_sender"] = new_data["msg_sender"]["user_name"]
+            new_data["msg_recipient"] = new_data["msg_recipient"]["user_name"]
 
         # Removing excluded fields
         for f in excludes:

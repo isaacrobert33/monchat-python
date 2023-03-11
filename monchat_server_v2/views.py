@@ -276,7 +276,7 @@ class UserList(APIView):
             d["fields"].pop("password")
             user_icon = (
                 users[i].profile.latest("uploaded_at").file.name
-                if users[i].profile.latest("uploaded_at")
+                if users[i].profile.all() and users[i].profile.latest("uploaded_at")
                 else "user.svg"
             )
             data[i] = {**d["fields"], "user_id": d["pk"], "user_icon": user_icon}

@@ -39,8 +39,11 @@ def map_msg_fields(
     for data in msg_data:
         new_data = data["fields"]
         recp_data = MonchatUser.objects.get(user_id=new_data["msg_recipient"])
-        profile_data = recp_data.profile.latest("uploaded_at")
-        recp_user_icon = "user.svg" if not profile_data else profile_data.file.name
+        recp_user_icon = (
+            recp_data.profile.latest("uploaded_at").file.name
+            if recp_data.profile.all()
+            else "user.svg"
+        )
 
         recp_data = serialize_user(recp_data, {"user_icon": recp_user_icon})
         new_data["msg_time"] = datetime.fromisoformat(
@@ -49,8 +52,11 @@ def map_msg_fields(
         new_data["msg_date"] = new_data["msg_time"].strftime("%Y:%m:%d")
         new_data["msg_time"] = new_data["msg_time"].strftime("%H:%M")
         sender_data = MonchatUser.objects.get(user_id=new_data["msg_sender"])
-        profile_data = sender_data.profile.latest("uploaded_at")
-        sender_user_icon = profile_data.file.name if profile_data else "user.svg"
+        sender_user_icon = (
+            sender_data.profile.latest("uploaded_at").file.name
+            if sender_data.profile.all()
+            else "user.svg"
+        )
 
         new_data["msg_sender"] = serialize_user(
             sender_data, {"user_icon": sender_user_icon}

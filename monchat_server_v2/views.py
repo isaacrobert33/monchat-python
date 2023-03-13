@@ -4,7 +4,7 @@ from django.db.models import Q
 from rest_framework.views import APIView
 from django.views import View
 from rest_framework.response import Response
-from .models import MonchatUser, MonchatMsg, ProfileUpload
+from .models import MonchatUser, MonchatMsg, ProfileUpload, MonchatGroup
 from .utils import (
     generate_id,
     map_msg_fields,
@@ -282,3 +282,82 @@ class UserList(APIView):
             data[i] = {**d["fields"], "user_id": d["pk"], "user_icon": user_icon}
 
         return Response({"msg": "Fetched data succesfully", "data": data}, status=200)
+
+
+class SingleGroup(APIView):
+    def get(self, request, group_id, user_id):
+        group = MonchatGroup.objects.get(group_id=group_id)
+        group_data = json.loads(serializers.serialize("json", group))["fields"]
+        return Response({"msg": "Fetched data successfully", "data": group_data})
+
+    def put(self, request, group_id, user_id):
+        group = MonchatGroup.objects.get(group_id=group_id)
+        admin_user = group.admins.filter(user_id=user_id)
+
+        if "name" in request.data and not admin_user.exists():
+            return Response({"msg": "Access denied"}, status=403)
+
+        group.update(**request.data)
+        group.save()
+        group_data = json.loads(serializers.serialize("json", group))["fields"]
+        return Response({"msg": "", "data": group_data})
+
+    def delete(self, request, group_id, user_id):
+        admin_user = group.admins.filter(user_id=user_id)
+        group = MonchatGroup.objects.get(group_id=group_id)
+
+        if admin_user.exists():
+            group.delete()
+        else:
+            return Response({"msg": "Access denied"}, status=403)
+
+        return Response({"msg": "Deleted group successfully"}, status=200)
+
+
+class Group(APIView):
+    def post(self, request, user_id):
+        user = MonchatUser.objects.get(user_id=user_id)
+        group = MonchatGroup.objects.create(
+            group_id=generate_id("group"),
+            name=request.data["name"],
+            description=request.data.get("description"),
+            created_by=user,
+        )
+        group.admins.add(user)
+        group.members.add(user)
+        group.save()
+        group_data = json.loads(serializers.serialize("json", group))["fields"]
+
+        return Response({"msg": "Fetched data successfully", "data": group_data})
+
+
+class GroupMembers(APIView):
+    def get(self, request, group_id, user_id):
+        members = MonchatGroup.objects.get(group_id=group_id).members.all()
+        return Response({"msg": "Fetched data successfully", "data": members})
+
+    def post(self, request, group_id, user_id):
+        user = MonchatUser.objects.get(user_id=user_id)
+        group = MonchatGroup.objects.get(group_id=group_id)
+        admin_user = group.admins.filter(user_id=user_id)
+
+        if admin_user.exists():
+            group.members.add(user)
+            group.save()
+        else:
+            return Response({"msg": "Access denied"}, status=403)
+
+        return Response({"msg": "Added member successfully"})
+
+    def delete(self, request, group_id, user_id):
+        user = MonchatUser.objects.get(user_id=user_id)
+        group = MonchatGroup.objects.get(group_id=group_id)
+        admin_user = group.admins.filter(user_id=user_id)
+
+        if admin_user.exists():
+            group.members.remove(user)
+            group.save()
+        else:
+            return Response({"msg": "Access denied"}, status=403)
+
+        return Response({"msg": "Member removed successfully"})

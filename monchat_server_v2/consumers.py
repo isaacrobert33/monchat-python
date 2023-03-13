@@ -56,6 +56,50 @@ class ChatConsumer(AsyncWebsocketConsumer):
             print(traceback.format_exc())
 
 
+class GroupConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        self.room_name = self.scope["url_route"]["kwargs"]["group_id"]
+
+        self.room_group_name = "group__%s" % self.room_name
+
+        await self.channel_layer.group_add(self.room_group_name, self.channel_name)
+        await self.accept()
+
+    async def receive(self, text_data=None, bytes_data=None):
+        msg_data = json.loads(text_data)
+
+        await self.channel_layer.group_send(
+            self.room_group_name, {"type": "group_message", **msg_data}
+        )
+
+        await self.save_msg_to_db(**msg_data)
+
+    async def group_message(self, event):
+        await self.send(text_data=json.dumps(event))
+
+    async def disconnect(self, code):
+        self.channel_layer.group_discard(self.room_group_name, self.channel_name)
+
+    @database_sync_to_async
+    def save_msg_to_db(
+        self, msg_id, msg_body, msg_sender, group_id, msg_time, **kwargs
+    ):
+        msg_sender = MonchatUser.objects.get(user_name=msg_sender.strip("'"))
+        msg_time = datetime.fromisoformat(msg_time.split(".")[0])
+
+        try:
+            MonchatMsg.objects.create(
+                msg_id=msg_id,
+                msg_body=msg_body,
+                msg_sender=msg_sender,
+                group_id=group_id,
+                msg_time=msg_time,
+                msg_status=MonchatMsg.MsgStatus.UNDELIVERED,
+            )
+        except:
+            print(traceback.format_exc())
+
+
 class OnlineStatusConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.room_group_name = "user"

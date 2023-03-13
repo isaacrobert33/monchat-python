@@ -29,6 +29,28 @@ class MonchatUser(models.Model):
         return self.user_name
 
 
+class MonchatGroup(models.Model):
+    group_id = models.SlugField(max_length=256, unique=True, primary_key=True)
+    name = models.CharField(max_length=200, default="New Group")
+    description = models.TextField(max_length=500)
+    created = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        MonchatUser,
+        to_field="user_id",
+        on_delete=models.CASCADE,
+        related_name="groups_created",
+    )
+    admins = models.ManyToManyField("MonchatUser", related_name="group_admin")
+    members = models.ManyToManyField("MonchatUser", related_name="group_member")
+
+    class Meta:
+        ordering = ["created"]
+
+    def __str__(self) -> str:
+        return self.name
+
+
 class MonchatMsg(models.Model):
     class MsgStatus(models.TextChoices):
         READ = "RD", "Read"
@@ -50,10 +72,12 @@ class MonchatMsg(models.Model):
         to_field="user_id",
         on_delete=models.CASCADE,
         related_name="msg_received",
+        default=MonchatUser,
     )
     msg_status = models.CharField(
         max_length=2, choices=MsgStatus.choices, default=MsgStatus.UNDELIVERED
     )
+    group_id = models.CharField(max_length=256, default="")
 
     class Meta:
         ordering = ["msg_time"]

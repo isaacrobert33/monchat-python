@@ -8,6 +8,7 @@ from .views import (
     CheckUserName,
     UserData,
     Upload,
+    GroupUpload,
     UserList,
     UserStatus,
     ResetPwd,
@@ -33,6 +34,11 @@ urlpatterns = [
         "check_username/<str:user_name>/", CheckUserName.as_view(), name="check_uname"
     ),
     path("profile_upload/<slug:user_name>/", Upload.as_view(), name="profile_upload"),
+    path(
+        "group_upload/<slug:group_id>/<slugLuser_id>/",
+        GroupUpload.as_view(),
+        name="group_upload",
+    ),
     path("users/<slug:user_id>/", UserList.as_view(), name="user_list"),
     path("user_status/<slug:user_id>/", UserStatus.as_view(), name="user_status"),
     path("reset_password/", ResetPwd.as_view(), name="pwd_reset"),

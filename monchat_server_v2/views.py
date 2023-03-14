@@ -4,7 +4,7 @@ from django.db.models import Q
 from rest_framework.views import APIView
 from django.views import View
 from rest_framework.response import Response
-from .models import MonchatUser, MonchatMsg, ProfileUpload, MonchatGroup
+from .models import MonchatUser, MonchatMsg, ProfileUpload, MonchatGroup, GroupUpload
 from .utils import (
     generate_id,
     map_msg_fields,
@@ -271,8 +271,13 @@ class GroupUpload(APIView):
     def post(self, request, group_id, user_id):
         group = MonchatGroup.objects.get(group_id=group_id)
         admin_user = group.admins.filter(user_id=user_id)
+        file = request.FILES.get("file")
+        file.name = f'{group.name}.{file.name.split(".")[1]}'
 
         if admin_user.exists():
+            fileID = generate_id("file")
+            icon_data = GroupUpload(file_id=fileID, file=file, group_id=group)
+            icon_data.save()
             pass
         else:
             return Response({"msg": "Access denied"}, status=403)

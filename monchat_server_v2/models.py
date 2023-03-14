@@ -107,6 +107,27 @@ class ProfileUpload(models.Model):
         return self.file.name
 
 
+class GroupUpload(models.Model):
+    file_id = models.SlugField(
+        max_length=256, unique=True, primary_key=True, default="<file_id>"
+    )
+    file = models.FileField(upload_to="%Y/%m/%d/")
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    group_id = models.ForeignKey(
+        MonchatGroup,
+        to_field="group_id",
+        on_delete=models.CASCADE,
+        related_name="icon",
+        default=MonchatUser,
+    )
+
+    def save(self, *args, **kwargs):
+        return super(GroupUpload, self).save(*args, **kwargs)
+
+    def __str__(self):
+        return self.group_id.name
+
+
 # class ContactedUsers(models.Model):
 #     user_id = models.ForeignKey(
 #         MonchatUser,

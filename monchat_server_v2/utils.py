@@ -22,6 +22,20 @@ def serialize_user(queryset, extra={}):
     return {**data["fields"], **{"user_id": data["pk"], **extra}}
 
 
+def serialize_group(queryset: list, single=False):
+    data = json.loads(serialize("json", queryset))
+    data = [{**d["fields"], "group_id": d["pk"]} for d in data]
+
+    for i, d in enumerate(data):
+        data[i]["group_icon"] = (
+            queryset[i].icon.latest("uploaded_at").file.name
+            if queryset[i].icon.first()
+            else ""
+        )
+
+    return data[0] if single else data
+
+
 def map_msg_fields(
     msg_data: list, user_name: str, excludes=[], sort=True, extra_user_data=True
 ) -> list:

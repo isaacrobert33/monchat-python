@@ -14,6 +14,7 @@ from .utils import (
     serialize_user,
     get_chat_socket_id,
     map_unread_count,
+    serialize_group,
 )
 import json
 import traceback
@@ -282,7 +283,8 @@ class GroupUpload(APIView):
         else:
             return Response({"msg": "Access denied"}, status=403)
 
-        group_data = json.loads(serializers.serialize("json", group))["fields"]
+        group_data = serialize_group([group], single=True)
+
         return Response({"msg": "Updated succesfully", "data": group_data})
 
 
@@ -348,7 +350,8 @@ class Group(APIView):
         group.admins.add(user)
         group.members.add(user, *members)
         group.save()
-        group_data = json.loads(serializers.serialize("json", group))["fields"]
+
+        group_data = serialize_group([group], single=True)
 
         return Response({"msg": "Fetched data successfully", "data": group_data})
 

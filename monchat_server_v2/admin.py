@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .views import MonchatMsg, MonchatUser, ProfileUpload
+from .models import MonchatMsg, MonchatUser, ProfileUpload, MonchatGroup
 
 
 # Register your models here.
@@ -29,6 +29,15 @@ class MonchatMsgAdmin(admin.ModelAdmin):
     raw_id_fields = ["msg_sender", "msg_recipient"]
     date_hierarchy = "msg_time"
     ordering = ["msg_time", "read_time"]
+
+
+@admin.register(MonchatGroup)
+class MonchatGroupAdmin(admin.ModelAdmin):
+    list_display = ["name", "description", "created", "updated", "created_by"]
+    list_filter = ["created", "updated", "created_by"]
+    search_fields = ["name", "description"]
+    date_hierarchy = "created"
+    ordering = ["created", "updated"]
 
 
 admin.site.register(ProfileUpload)

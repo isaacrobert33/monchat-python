@@ -15,6 +15,7 @@ from .utils import (
     get_chat_socket_id,
     map_unread_count,
     serialize_group,
+    user_group_chats,
 )
 import json
 import traceback
@@ -160,6 +161,11 @@ class LatestChats(APIView):
             [q for q in json.loads(serializers.serialize("json", latest_chat_list))],
             user_name=user_qset.user_name,
         )
+
+        group_chats = user_group_chats(
+            groups=user_qset.group_member.all(), user_name=user_qset.user_name
+        )
+        latest_chat_list.extend(group_chats)
         latest_chat_list = map_unread_count(latest_chat_list, user_id=user_id)
 
         return Response(

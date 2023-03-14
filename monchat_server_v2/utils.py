@@ -36,6 +36,21 @@ def serialize_group(queryset: list, single=False):
     return data[0] if single else data
 
 
+def user_group_chats(groups, user_name=None):
+    chats = []
+
+    for group in groups:
+        latest_chat = MonchatMsg.objects.filter(group_id=group.group_id)
+        latest_chat = latest_chat.latest("msg_time") if latest_chat else None
+        if latest_chat:
+            chats.append(json.loads(serialize("json", latest_chat)))
+        # else:
+        #     chats.append({"created_time": group.created, "info": "This group was created", "type": "info"})
+
+    chats = map_msg_fields(chats, user_name=user_name)
+    return chats
+
+
 def map_msg_fields(
     msg_data: list, user_name: str, excludes=[], sort=True, extra_user_data=True
 ) -> list:

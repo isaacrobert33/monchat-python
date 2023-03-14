@@ -36,7 +36,11 @@ urlpatterns = [
     path("users/<slug:user_id>/", UserList.as_view(), name="user_list"),
     path("user_status/<slug:user_id>/", UserStatus.as_view(), name="user_status"),
     path("reset_password/", ResetPwd.as_view(), name="pwd_reset"),
-    path("group/", Group.as_view(), name="new_group"),
-    path("group/<slug:group_id>/", SingleGroup.as_view(), name="group"),
-    path("group/members/<slug:group_id>", GroupMembers.as_view(), name="members"),
+    path("group/<slug:user_id>/", Group.as_view(), name="new_group"),
+    path("group/<slug:group_id>/<slug:user_id>/", SingleGroup.as_view(), name="group"),
+    path(
+        "group/members/<slug:group_id>/<slug:user_id>/",
+        GroupMembers.as_view(),
+        name="members",
+    ),
 ]

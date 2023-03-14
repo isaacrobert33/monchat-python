@@ -267,6 +267,20 @@ class Upload(APIView):
         return Response({"msg": "File upload succesfully"})
 
 
+class GroupUpload(APIView):
+    def post(self, request, group_id, user_id):
+        group = MonchatGroup.objects.get(group_id=group_id)
+        admin_user = group.admins.filter(user_id=user_id)
+
+        if admin_user.exists():
+            pass
+        else:
+            return Response({"msg": "Access denied"}, status=403)
+
+        group_data = json.loads(serializers.serialize("json", group))["fields"]
+        return Response({"msg": "Updated succesfully", "data": group_data})
+
+
 class UserList(APIView):
     def get(self, request, user_id):
         users = MonchatUser.objects.all().exclude(user_id=user_id)
@@ -323,8 +337,11 @@ class Group(APIView):
             description=request.data.get("description"),
             created_by=user,
         )
+        members = [
+            MonchatUser.objects.get(user_id=q) for q in request.data.get("members", [])
+        ]
         group.admins.add(user)
-        group.members.add(user)
+        group.members.add(user, *members)
         group.save()
         group_data = json.loads(serializers.serialize("json", group))["fields"]
 

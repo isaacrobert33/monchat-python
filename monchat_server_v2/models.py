@@ -78,6 +78,7 @@ class MonchatMsg(models.Model):
         max_length=2, choices=MsgStatus.choices, default=MsgStatus.UNDELIVERED
     )
     group_id = models.CharField(max_length=256, default="")
+    read_by = models.ManyToManyField("MonchatUser", related_name="group_msg_read")
 
     class Meta:
         ordering = ["msg_time"]

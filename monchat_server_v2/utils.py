@@ -1,5 +1,5 @@
 from datetime import datetime
-from .models import MonchatUser, MonchatMsg
+from .models import MonchatUser, MonchatMsg, MonchatGroup
 from django.core.serializers import serialize
 from django.db.models import Q
 from django.utils.encoding import smart_str
@@ -47,12 +47,32 @@ def user_group_chats(groups, user_name=None):
         # else:
         #     chats.append({"created_time": group.created, "info": "This group was created", "type": "info"})
 
-    chats = map_msg_fields(chats, user_name=user_name)
+    chats = map_group_msg_data(chats)
     return chats
 
 
+def map_group_msg_data(group_data: list) -> list:
+    mapped_data = []
+
+    for data in group_data:
+        data["fields"]["group_id"] = data["pk"]
+        group = MonchatGroup.objects.get(pk=data["group_id"])
+        data["fields"]["group_icon"] = (
+            group.icon.latest("uploaded_at") if group.icon.first().exists() else ""
+        )
+        # sender_data = MonchatUser.objects.get(user_id=data['fields']["msg_sender"])
+        mapped_data.append(data["fields"])
+
+    return mapped_data
+
+
 def map_msg_fields(
-    msg_data: list, user_name: str, excludes=[], sort=True, extra_user_data=True
+    msg_data: list,
+    user_name: str,
+    excludes=[],
+    sort=True,
+    extra_user_data=True,
+    chat_type="single_chat",
 ) -> list:
     mapped = []
     msg_data = (
@@ -104,6 +124,8 @@ def map_msg_fields(
         if not extra_user_data:
             new_data["msg_sender"] = new_data["msg_sender"]["user_name"]
             new_data["msg_recipient"] = new_data["msg_recipient"]["user_name"]
+
+        new_data["type"] = chat_type
 
         # Removing excluded fields
         for f in excludes:
@@ -206,22 +228,28 @@ def get_chat_socket_id(msg_sender, msg_recipient):
     return socket_id
 
 
-def map_unread_count(data: list, user_id):
+def map_unread_count(data: list, user_id, group=False):
     mapped = []
 
-    for msg in data:
-        recp = (
-            msg["msg_sender"]["user_id"]
-            if msg["direction"] == "inbound"
-            else msg["msg_recipient"]["user_name"]
-        )
-        unread_count = MonchatMsg.objects.filter(
-            Q(msg_status=MonchatMsg.MsgStatus.UNDELIVERED)
-            | Q(msg_status=MonchatMsg.MsgStatus.DELIVERED),
-            msg_sender__user_id=recp,
-            msg_recipient__user_id=user_id,
-        ).count()
-        msg["unread_count"] = unread_count
-        mapped.append(msg)
+    if group:
+        for msg in data:
+            unread_count = MonchatMsg.objects.filter(read_by__user_id=user_id).count()
+            msg['unread_count'] = unread_count
+            
+    else:
+        for msg in data:
+            recp = (
+                msg["msg_sender"]["user_id"]
+                if msg["direction"] == "inbound"
+                else msg["msg_recipient"]["user_name"]
+            )
+            unread_count = MonchatMsg.objects.filter(
+                Q(msg_status=MonchatMsg.MsgStatus.UNDELIVERED)
+                | Q(msg_status=MonchatMsg.MsgStatus.DELIVERED),
+                msg_sender__user_id=recp,
+                msg_recipient__user_id=user_id,
+            ).count()
+            msg["unread_count"] = unread_count
+            mapped.append(msg)
 
     return mapped

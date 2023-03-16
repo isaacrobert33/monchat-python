@@ -108,7 +108,7 @@ class ProfileUpload(models.Model):
         return self.file.name
 
 
-class GroupUpload(models.Model):
+class MonchatGroupUpload(models.Model):
     file_id = models.SlugField(
         max_length=256, unique=True, primary_key=True, default="<file_id>"
     )
@@ -123,7 +123,7 @@ class GroupUpload(models.Model):
     )
 
     def save(self, *args, **kwargs):
-        return super(GroupUpload, self).save(*args, **kwargs)
+        return super(MonchatGroupUpload, self).save(*args, **kwargs)
 
     def __str__(self):
         return self.group_id.name

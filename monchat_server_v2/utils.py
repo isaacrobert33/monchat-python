@@ -42,10 +42,19 @@ def user_group_chats(groups, user_name=None):
     for group in groups:
         latest_chat = MonchatMsg.objects.filter(group_id=group.group_id)
         latest_chat = latest_chat.latest("msg_time") if latest_chat else None
+
         if latest_chat:
-            chats.append(json.loads(serialize("json", latest_chat)))
-        # else:
-        #     chats.append({"created_time": group.created, "info": "This group was created", "type": "info"})
+            chats.append(
+                {**json.loads(serialize("json", latest_chat)), "type": "group_chat"}
+            )
+        else:
+            chats.append(
+                {
+                    "created_time": group.created,
+                    "info": "This group was created",
+                    "type": "group_info",
+                }
+            )
 
     chats = map_group_msg_data(chats)
     return chats
@@ -55,14 +64,17 @@ def map_group_msg_data(group_data: list) -> list:
     mapped_data = []
 
     for data in group_data:
-        data["fields"]["group_id"] = data["pk"]
-        group = MonchatGroup.objects.get(pk=data["group_id"])
-        data["fields"]["group_icon"] = (
-            group.icon.latest("uploaded_at") if group.icon.first().exists() else ""
-        )
-        # sender_data = MonchatUser.objects.get(user_id=data['fields']["msg_sender"])
-        mapped_data.append(data["fields"])
-
+        if data["type"] == "group_chat":
+            data["fields"]["group_id"] = data["pk"]
+            group = MonchatGroup.objects.get(pk=data["group_id"])
+            data["fields"]["group_icon"] = (
+                group.icon.latest("uploaded_at") if group.icon.first().exists() else ""
+            )
+            # sender_data = MonchatUser.objects.get(user_id=data['fields']["msg_sender"])
+            mapped_data.append(data["fields"])
+        else:
+            mapped_data.append(data)
+    print(mapped_data)
     return mapped_data
 
 
@@ -234,8 +246,8 @@ def map_unread_count(data: list, user_id, group=False):
     if group:
         for msg in data:
             unread_count = MonchatMsg.objects.filter(read_by__user_id=user_id).count()
-            msg['unread_count'] = unread_count
-            
+            msg["unread_count"] = unread_count
+
     else:
         for msg in data:
             recp = (

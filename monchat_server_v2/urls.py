@@ -35,7 +35,7 @@ urlpatterns = [
     ),
     path("profile_upload/<slug:user_name>/", Upload.as_view(), name="profile_upload"),
     path(
-        "group_upload/<slug:group_id>/<slugLuser_id>/",
+        "group_upload/<slug:group_id>/<slug:user_id>/",
         GroupUpload.as_view(),
         name="group_upload",
     ),

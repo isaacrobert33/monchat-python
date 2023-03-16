@@ -4,7 +4,13 @@ from django.db.models import Q
 from rest_framework.views import APIView
 from django.views import View
 from rest_framework.response import Response
-from .models import MonchatUser, MonchatMsg, ProfileUpload, MonchatGroup, GroupUpload
+from .models import (
+    MonchatUser,
+    MonchatMsg,
+    ProfileUpload,
+    MonchatGroup,
+    MonchatGroupUpload,
+)
 from .utils import (
     generate_id,
     map_msg_fields,
@@ -165,8 +171,9 @@ class LatestChats(APIView):
         group_chats = user_group_chats(
             groups=user_qset.group_member.all(), user_name=user_qset.user_name
         )
-        latest_chat_list.extend(group_chats)
+        print("members", user_qset.group_member.all())
         latest_chat_list = map_unread_count(latest_chat_list, user_id=user_id)
+        latest_chat_list.extend(group_chats)
 
         return Response(
             {"msg": "Fetched data successfully", "data": latest_chat_list}, status=200
@@ -283,9 +290,8 @@ class GroupUpload(APIView):
 
         if admin_user.exists():
             fileID = generate_id("file")
-            icon_data = GroupUpload(file_id=fileID, file=file, group_id=group)
+            icon_data = MonchatGroupUpload(file_id=fileID, file=file, group_id=group)
             icon_data.save()
-            pass
         else:
             return Response({"msg": "Access denied"}, status=403)
 

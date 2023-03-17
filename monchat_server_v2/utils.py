@@ -36,46 +36,69 @@ def serialize_group(queryset: list, single=False):
     return data[0] if single else data
 
 
-def user_group_chats(groups, user_name=None):
+def map_group_unread_count(group_chat, user_id):
+    grp = MonchatMsg.objects.exclude(read_by__user_id=user_id).filter(
+        group_id=group_chat["group_id"]
+    )
+    mapped = {**group_chat, "unread_count": grp.count()}
+
+    return mapped
+
+
+def sort_chats(chats: list, date_format="other") -> list:
+    return sorted(
+        chats,
+        key=lambda x: datetime.strptime(x["msg_time"], "%H:%M")
+        if date_format != "iso"
+        else datetime.fromisoformat(x["msg_time"]),
+    )
+
+
+def user_group_chats(groups, user_id):
     chats = []
 
     for group in groups:
         latest_chat = MonchatMsg.objects.filter(group_id=group.group_id)
-        latest_chat = latest_chat.latest("msg_time") if latest_chat else None
+        latest_chat = latest_chat.latest("msg_time") if latest_chat.exists() else None
 
         if latest_chat:
-            chats.append(
-                {**json.loads(serialize("json", latest_chat)), "type": "group_chat"}
+            json_data = json.loads(serialize("json", [latest_chat]))[0]
+            json_data["fields"]["msg_time"] = json_data["fields"]["msg_time"].strftime(
+                "%H:%M"
             )
+            d = {
+                "group_data": {
+                    **json_data["fields"],
+                    "group_icon": group.icon.latest("uploaded_at").file.name
+                    if group.icon.first()
+                    else "",
+                    "group_id": json_data["pk"],
+                },
+                **json_data["fields"],
+                "type": "group_chat",
+            }
+            d = map_unread_count(d, user_id=user_id)  ## Map unread count for group msg
+            chats.append(d)
         else:
+            json_data = json.loads(serialize("json", [group]))[0]
             chats.append(
                 {
-                    "created_time": group.created,
-                    "info": "This group was created",
+                    "msg_time": group.created.strftime("%H:%M"),
+                    "group_data": {
+                        **json_data["fields"],
+                        "group_icon": group.icon.latest("uploaded_at").file.name
+                        if group.icon.first()
+                        else "",
+                        "group_id": json_data["pk"],
+                        "info": f'You created this group "{group.name}"'
+                        if group.created_by.user_id == user_id
+                        else f"This group was created by {group.created_by.user_name}",
+                    },
                     "type": "group_info",
                 }
             )
 
-    chats = map_group_msg_data(chats)
     return chats
-
-
-def map_group_msg_data(group_data: list) -> list:
-    mapped_data = []
-
-    for data in group_data:
-        if data["type"] == "group_chat":
-            data["fields"]["group_id"] = data["pk"]
-            group = MonchatGroup.objects.get(pk=data["group_id"])
-            data["fields"]["group_icon"] = (
-                group.icon.latest("uploaded_at") if group.icon.first().exists() else ""
-            )
-            # sender_data = MonchatUser.objects.get(user_id=data['fields']["msg_sender"])
-            mapped_data.append(data["fields"])
-        else:
-            mapped_data.append(data)
-    print(mapped_data)
-    return mapped_data
 
 
 def map_msg_fields(

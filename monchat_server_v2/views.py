@@ -22,6 +22,7 @@ from .utils import (
     map_unread_count,
     serialize_group,
     user_group_chats,
+    sort_chats,
 )
 import json
 import traceback
@@ -169,11 +170,14 @@ class LatestChats(APIView):
         )
 
         group_chats = user_group_chats(
-            groups=user_qset.group_member.all(), user_name=user_qset.user_name
+            groups=user_qset.group_member.all(), user_id=user_id
         )
-        print("members", user_qset.group_member.all())
+
         latest_chat_list = map_unread_count(latest_chat_list, user_id=user_id)
         latest_chat_list.extend(group_chats)
+
+        # Sort messages by time
+        latest_chat_list = sort_chats(latest_chat_list)
 
         return Response(
             {"msg": "Fetched data successfully", "data": latest_chat_list}, status=200

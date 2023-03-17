@@ -177,10 +177,16 @@ class LatestChats(APIView):
         latest_chat_list.extend(group_chats)
 
         # Sort messages by time
+
         latest_chat_list = sort_chats(latest_chat_list)
 
         return Response(
-            {"msg": "Fetched data successfully", "data": latest_chat_list}, status=200
+            {
+                "msg": "Fetched data successfully",
+                "data": latest_chat_list,
+                "groups": [g.group_id for g in user_qset.group_member.all()],
+            },
+            status=200,
         )
 
 

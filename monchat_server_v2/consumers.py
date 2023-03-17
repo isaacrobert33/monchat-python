@@ -1,4 +1,4 @@
-import json, traceback
+import json, traceback, pytz
 from .models import MonchatMsg
 from .utils import save_msg_to_db
 from channels.generic.websocket import AsyncWebsocketConsumer
@@ -37,9 +37,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
     def save_msg_to_db(
         self, msg_id, msg_body, msg_sender, msg_recipient, msg_time, **kwargs
     ):
+        tz = pytz.timezone("UTC")
         msg_recipient = MonchatUser.objects.get(user_name=msg_recipient.strip("'"))
         msg_sender = MonchatUser.objects.get(user_name=msg_sender.strip("'"))
-        msg_time = datetime.fromisoformat(msg_time.split(".")[0])
+        msg_time = tz.localize(datetime.fromisoformat(msg_time.split(".")[0]))
 
         try:
             MonchatMsg.objects.create(

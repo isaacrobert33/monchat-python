@@ -5,11 +5,13 @@ from django.db.models import Q
 from django.utils.encoding import smart_str
 from datetime import datetime
 from functools import wraps
+import timeago
 import hashlib
 import json
 import traceback
 import random
 import uuid
+import pytz
 
 
 def generate_id(prefix: str):
@@ -45,17 +47,20 @@ def map_group_unread_count(group_chat, user_id):
     return mapped
 
 
-def sort_chats(chats: list, date_format="other") -> list:
+def sort_chats(chats: list, date_format="iso") -> list:
+    tz = pytz.timezone("UTC")
     return sorted(
         chats,
-        key=lambda x: datetime.strptime(x["msg_time"], "%H:%M")
-        if date_format != "iso"
-        else datetime.fromisoformat(x["msg_time"]),
+        key=lambda x: datetime.fromisoformat(str(x["msg_date"]))
+        if datetime.fromisoformat(str(x["msg_date"])).tzinfo
+        else tz.localize(datetime.fromisoformat(str(x["msg_date"]))),
+        reverse=True,
     )
 
 
 def user_group_chats(groups, user_id):
     chats = []
+    tz = pytz.timezone("UTC")
 
     for group in groups:
         latest_chat = MonchatMsg.objects.filter(group_id=group.group_id)
@@ -73,8 +78,14 @@ def user_group_chats(groups, user_id):
                     if group.icon.first()
                     else "",
                     "group_id": json_data["pk"],
+                    "members": [m.user_name for m in group.members.all()],
                 },
                 **json_data["fields"],
+                "msg_date": json_data["fields"]["msg_time"],
+                "msg_time": json_data["fields"]["msg_time"].strftime("%H:%M"),
+                "msg_timeago": timeago.format(
+                    json_data["fields"]["msg_time"], now=tz.localize(datetime.now())
+                ),
                 "type": "group_chat",
             }
             d = map_unread_count(d, user_id=user_id)  ## Map unread count for group msg
@@ -84,12 +95,17 @@ def user_group_chats(groups, user_id):
             chats.append(
                 {
                     "msg_time": group.created.strftime("%H:%M"),
+                    "msg_timeago": timeago.format(
+                        group.created, now=tz.localize(datetime.now())
+                    ),
+                    "msg_date": group.created,
                     "group_data": {
                         **json_data["fields"],
                         "group_icon": group.icon.latest("uploaded_at").file.name
                         if group.icon.first()
                         else "",
                         "group_id": json_data["pk"],
+                        "members": [m.user_name for m in group.members.all()],
                         "info": f'You created this group "{group.name}"'
                         if group.created_by.user_id == user_id
                         else f"This group was created by {group.created_by.user_name}",
@@ -133,7 +149,10 @@ def map_msg_fields(
         new_data["msg_time"] = datetime.fromisoformat(
             new_data["msg_time"].split(".")[0]
         )
-        new_data["msg_date"] = new_data["msg_time"].strftime("%Y:%m:%d")
+        new_data["msg_timeago"] = timeago.format(
+            new_data["msg_time"], now=datetime.now()
+        )
+        new_data["msg_date"] = new_data["msg_time"]
         new_data["msg_time"] = new_data["msg_time"].strftime("%H:%M")
         sender_data = MonchatUser.objects.get(user_id=new_data["msg_sender"])
         sender_user_icon = (

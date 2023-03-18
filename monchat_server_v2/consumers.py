@@ -72,7 +72,7 @@ class GroupConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_send(
             self.room_group_name, {"type": "group_message", **msg_data}
         )
-
+        print(msg_data)
         await self.save_msg_to_db(**msg_data)
 
     async def group_message(self, event):
@@ -89,14 +89,16 @@ class GroupConsumer(AsyncWebsocketConsumer):
         msg_time = datetime.fromisoformat(msg_time.split(".")[0])
 
         try:
-            MonchatMsg.objects.create(
+            msg = MonchatMsg.objects.create(
                 msg_id=msg_id,
                 msg_body=msg_body,
                 msg_sender=msg_sender,
+                msg_recipient=msg_sender,
                 group_id=group_id,
                 msg_time=msg_time,
                 msg_status=MonchatMsg.MsgStatus.UNDELIVERED,
             )
+            msg.read_by.add(msg_sender)
         except:
             print(traceback.format_exc())
 
@@ -190,6 +192,11 @@ class ReadRecieptConsumer(AsyncWebsocketConsumer):
         msg_data = MonchatMsg.objects.get(msg_id=msg_id)
         msg_data.msg_status = msg_status
         msg_data.read_time = datetime.fromisoformat(read_time.split(".")[0])
+
+        if kwargs.get("read_by"):
+            user = MonchatUser.objects.get(user_name=kwargs["read_by"])
+            msg_data.read_by.add(user)
+
         msg_data.save()
 
         if kwargs:

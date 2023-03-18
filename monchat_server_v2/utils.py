@@ -47,13 +47,24 @@ def map_group_unread_count(group_chat, user_id):
     return mapped
 
 
-def sort_chats(chats: list, date_format="iso") -> list:
+def sort_chats(chats: list, user_id, date_format="iso") -> list:
     tz = pytz.timezone("UTC")
+    chats_data = chats
+
+    # Removal of self messages
+    for chat in chats:
+        if (
+            not chat["type"] in ["group_info", "group_chat"]
+            and chat["msg_sender"]["user_id"] == chat["msg_recipient"]["user_id"]
+        ):
+            chats_data.remove(chat)
+
+    print(len(chats_data))
     return sorted(
-        chats,
+        chats_data,
         key=lambda x: datetime.fromisoformat(str(x["msg_date"]))
-        if datetime.fromisoformat(str(x["msg_date"])).tzinfo
-        else tz.localize(datetime.fromisoformat(str(x["msg_date"]))),
+        if datetime.fromisoformat(str(x["msg_date"]).split(".")[0]).tzinfo
+        else tz.localize(datetime.fromisoformat(str(x["msg_date"]).split(".")[0])),
         reverse=True,
     )
 
@@ -65,54 +76,76 @@ def user_group_chats(groups, user_id):
     for group in groups:
         latest_chat = MonchatMsg.objects.filter(group_id=group.group_id)
         latest_chat = latest_chat.latest("msg_time") if latest_chat.exists() else None
+        group_json_data = json.loads(serialize("json", [group]))[0]
 
         if latest_chat:
             json_data = json.loads(serialize("json", [latest_chat]))[0]
-            json_data["fields"]["msg_time"] = json_data["fields"]["msg_time"].strftime(
-                "%H:%M"
+            sender_data = MonchatUser.objects.get(
+                user_id=json_data["fields"]["msg_sender"]
             )
+            sender_user_icon = (
+                sender_data.profile.latest("uploaded_at").file.name
+                if sender_data.profile.all()
+                else "user.svg"
+            )
+            sender_data = serialize_user(sender_data, {"user_icon": sender_user_icon})
+            if sender_data["user_id"] == user_id:
+                sender_data["user_name"] = "You"
+
             d = {
                 "group_data": {
-                    **json_data["fields"],
+                    **group_json_data["fields"],
                     "group_icon": group.icon.latest("uploaded_at").file.name
                     if group.icon.first()
                     else "",
-                    "group_id": json_data["pk"],
+                    "group_id": group.group_id,
                     "members": [m.user_name for m in group.members.all()],
                 },
                 **json_data["fields"],
                 "msg_date": json_data["fields"]["msg_time"],
-                "msg_time": json_data["fields"]["msg_time"].strftime("%H:%M"),
                 "msg_timeago": timeago.format(
-                    json_data["fields"]["msg_time"], now=tz.localize(datetime.now())
+                    tz.localize(
+                        datetime.fromisoformat(
+                            json_data["fields"]["msg_time"].split(".")[0]
+                        )
+                    ),
+                    now=tz.localize(datetime.now()),
                 ),
+                "msg_time": datetime.fromisoformat(
+                    json_data["fields"]["msg_time"].split(".")[0]
+                ).strftime("%H:%M"),
+                "msg_sender": sender_data,
+                "direction": "outbound"
+                if latest_chat.msg_sender.user_id == user_id
+                else "inbound",
                 "type": "group_chat",
             }
-            d = map_unread_count(d, user_id=user_id)  ## Map unread count for group msg
+            d = map_group_unread_count(
+                d, user_id=user_id
+            )  ## Map unread count for group msg
             chats.append(d)
         else:
-            json_data = json.loads(serialize("json", [group]))[0]
-            chats.append(
-                {
-                    "msg_time": group.created.strftime("%H:%M"),
-                    "msg_timeago": timeago.format(
-                        group.created, now=tz.localize(datetime.now())
-                    ),
-                    "msg_date": group.created,
-                    "group_data": {
-                        **json_data["fields"],
-                        "group_icon": group.icon.latest("uploaded_at").file.name
-                        if group.icon.first()
-                        else "",
-                        "group_id": json_data["pk"],
-                        "members": [m.user_name for m in group.members.all()],
-                        "info": f'You created this group "{group.name}"'
-                        if group.created_by.user_id == user_id
-                        else f"This group was created by {group.created_by.user_name}",
-                    },
-                    "type": "group_info",
-                }
-            )
+            d = {
+                "msg_time": group.created.strftime("%H:%M"),
+                "msg_timeago": timeago.format(
+                    group.created, now=tz.localize(datetime.now())
+                ),
+                "msg_date": group.created,
+                "group_data": {
+                    **group_json_data["fields"],
+                    "group_icon": group.icon.latest("uploaded_at").file.name
+                    if group.icon.first()
+                    else "",
+                    "group_id": group_json_data["pk"],
+                    "members": [m.user_name for m in group.members.all()],
+                    "info": f'You created this group "{group.name}"'
+                    if group.created_by.user_id == user_id
+                    else f"This group was created by {group.created_by.user_name}",
+                },
+                "type": "group_info",
+                "unread_count": 0,
+            }
+            chats.append(d)
 
     return chats
 
@@ -289,7 +322,7 @@ def map_unread_count(data: list, user_id, group=False):
         for msg in data:
             unread_count = MonchatMsg.objects.filter(read_by__user_id=user_id).count()
             msg["unread_count"] = unread_count
-
+            mapped.append(msg)
     else:
         for msg in data:
             recp = (

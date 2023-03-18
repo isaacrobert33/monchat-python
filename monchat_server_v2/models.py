@@ -72,13 +72,16 @@ class MonchatMsg(models.Model):
         to_field="user_id",
         on_delete=models.CASCADE,
         related_name="msg_received",
-        default=MonchatUser,
+        blank=True,
     )
     msg_status = models.CharField(
         max_length=2, choices=MsgStatus.choices, default=MsgStatus.UNDELIVERED
     )
     group_id = models.CharField(max_length=256, default="")
-    read_by = models.ManyToManyField("MonchatUser", related_name="group_msg_read")
+
+    read_by = models.ManyToManyField(
+        "MonchatUser", related_name="group_msg_read", blank=True
+    )
 
     class Meta:
         ordering = ["msg_time"]

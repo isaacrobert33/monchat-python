@@ -178,7 +178,7 @@ class LatestChats(APIView):
 
         # Sort messages by time
 
-        latest_chat_list = sort_chats(latest_chat_list)
+        latest_chat_list = sort_chats(latest_chat_list, user_id=user_id)
 
         return Response(
             {

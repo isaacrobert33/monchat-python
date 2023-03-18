@@ -222,15 +222,38 @@ class Chats(APIView):
             extra_user_data=False,
         )
 
-        socket_id = get_chat_socket_id(
-            msg_sender=user_data.user_id, msg_recipient=recipient_data.user_id
+        return Response(
+            {
+                "msg": "Fetched data succesfully",
+                "data": serializer,
+            },
+            status=200,
+        )
+
+
+class GroupChats(APIView):
+    def get(self, request, group_id, user_name):
+        user_data = get_object_or_404(MonchatUser, user_name=user_name)
+        group = MonchatGroup.objects.get(group_id=group_id)
+
+        if group.members.filter(user_name=user_name).exists():
+            chats = MonchatMsg.objects.filter(group_id=group_id).order_by("msg_time")
+        else:
+            return Response({"msg": "Access denied"}, status=403)
+
+        excl = ["msg_date"]
+        serializer = map_msg_fields(
+            [q for q in json.loads(serializers.serialize("json", chats))],
+            user_name=user_name,
+            excludes=excl,
+            sort=False,
+            extra_user_data=False,
         )
 
         return Response(
             {
                 "msg": "Fetched data succesfully",
                 "data": serializer,
-                "socket_id": socket_id,
             },
             status=200,
         )

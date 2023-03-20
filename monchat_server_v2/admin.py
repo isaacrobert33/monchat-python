@@ -24,7 +24,14 @@ class MonchatUserAdmin(admin.ModelAdmin):
 @admin.register(MonchatMsg)
 class MonchatMsgAdmin(admin.ModelAdmin):
     list_display = ["msg_sender", "msg_recipient", "msg_body", "msg_status"]
-    list_filter = ["msg_sender", "msg_recipient", "msg_time", "msg_status", "read_time"]
+    list_filter = [
+        "msg_sender",
+        "msg_recipient",
+        "msg_time",
+        "msg_status",
+        "read_time",
+        "group_id",
+    ]
     search_fields = ["msg_sender", "msg_body", "msg_recipient"]
     raw_id_fields = ["msg_sender", "msg_recipient"]
     date_hierarchy = "msg_time"

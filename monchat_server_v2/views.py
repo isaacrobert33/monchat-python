@@ -233,7 +233,7 @@ class Chats(APIView):
 
 class GroupChats(APIView):
     def get(self, request, group_id, user_name):
-        user_data = get_object_or_404(MonchatUser, user_name=user_name)
+        # user_data = get_object_or_404(MonchatUser, user_name=user_name)
         group = MonchatGroup.objects.get(group_id=group_id)
 
         if group.members.filter(user_name=user_name).exists():
@@ -247,7 +247,7 @@ class GroupChats(APIView):
             user_name=user_name,
             excludes=excl,
             sort=False,
-            extra_user_data=False,
+            extra_user_data=True,
         )
 
         return Response(

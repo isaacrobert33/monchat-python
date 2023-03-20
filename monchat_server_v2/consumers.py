@@ -70,12 +70,12 @@ class GroupConsumer(AsyncWebsocketConsumer):
         msg_data = json.loads(text_data)
 
         await self.channel_layer.group_send(
-            self.room_group_name, {"type": "group_message", **msg_data}
+            self.room_group_name, {"type": "group_chat", **msg_data}
         )
-        print(msg_data)
+
         await self.save_msg_to_db(**msg_data)
 
-    async def group_message(self, event):
+    async def group_chat(self, event):
         await self.send(text_data=json.dumps(event))
 
     async def disconnect(self, code):
@@ -116,7 +116,6 @@ class OnlineStatusConsumer(AsyncWebsocketConsumer):
         connection_type = data["type"]
         time = data.get("time", "")
 
-        print(user_name, connection_type)
         await self.channel_layer.group_send(
             self.room_group_name,
             {

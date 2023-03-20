@@ -248,6 +248,7 @@ class GroupChats(APIView):
             excludes=excl,
             sort=False,
             extra_user_data=True,
+            chat_type="group_chat",
         )
 
         return Response(

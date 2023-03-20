@@ -3,9 +3,9 @@ from .models import MonchatMsg
 from .utils import save_msg_to_db
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
-from .models import MonchatUser, MonchatMsg
+from .models import MonchatUser, MonchatMsg, MonchatGroup
 from django.db.models import Q
-from .utils import generate_id
+from .utils import check_members_read
 from datetime import datetime
 
 
@@ -190,14 +190,20 @@ class ReadRecieptConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def change_msg_status(self, msg_id, msg_status, read_time, **kwargs):
         msg_data = MonchatMsg.objects.get(msg_id=msg_id)
-        msg_data.msg_status = msg_status
         msg_data.read_time = datetime.fromisoformat(read_time.split(".")[0])
 
         if kwargs.get("read_by"):
             user = MonchatUser.objects.get(user_name=kwargs["read_by"])
             msg_data.read_by.add(user)
+            msg_data.save()
 
-        msg_data.save()
+            if check_members_read(msg_data, msg_data.group_id):
+                msg_data.msg_status = msg_status
+                msg_data.save()
+
+        else:
+            msg_data.msg_status = msg_status
+            msg_data.save()
 
         if kwargs:
             self.update_msg_status(

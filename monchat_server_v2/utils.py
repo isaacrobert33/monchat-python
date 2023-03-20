@@ -340,3 +340,8 @@ def map_unread_count(data: list, user_id, group=False):
             mapped.append(msg)
 
     return mapped
+
+
+def check_members_read(msg_data, group_id):
+    group = MonchatGroup.objects.get(group_id=group_id)
+    return msg_data.read_by.count() == group.members.count()

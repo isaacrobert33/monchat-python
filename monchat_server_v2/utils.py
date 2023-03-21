@@ -59,7 +59,6 @@ def sort_chats(chats: list, user_id, date_format="iso") -> list:
         ):
             chats_data.remove(chat)
 
-    print(len(chats_data))
     return sorted(
         chats_data,
         key=lambda x: datetime.fromisoformat(str(x["msg_date"]))
@@ -148,6 +147,30 @@ def user_group_chats(groups, user_id):
             chats.append(d)
 
     return chats
+
+
+def new_group_data(group, user_id: str) -> dict:
+    tz = pytz.timezone("UTC")
+    group_json_data = json.loads(serialize("json", [group]))[0]
+    data = {
+        "msg_time": group.created.strftime("%H:%M"),
+        "msg_timeago": timeago.format(group.created, now=tz.localize(datetime.now())),
+        "msg_date": group.created,
+        "group_data": {
+            **group_json_data["fields"],
+            "group_icon": group.icon.latest("uploaded_at").file.name
+            if group.icon.first()
+            else "",
+            "group_id": group_json_data["pk"],
+            "members": [m.user_name for m in group.members.all()],
+            "info": f'You created this group "{group.name}"'
+            if group.created_by.user_id == user_id
+            else f"This group was created by {group.created_by.user_name}",
+        },
+        "type": "group_info",
+        "unread_count": 0,
+    }
+    return data
 
 
 def map_msg_fields(

@@ -23,6 +23,7 @@ from .utils import (
     serialize_group,
     user_group_chats,
     sort_chats,
+    new_group_data,
 )
 import json
 import traceback
@@ -397,7 +398,7 @@ class Group(APIView):
         group.members.add(user, *members)
         group.save()
 
-        group_data = serialize_group([group], single=True)
+        group_data = new_group_data(group=group, user_id=user_id)
 
         return Response({"msg": "Fetched data successfully", "data": group_data})
 

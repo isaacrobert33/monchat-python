@@ -223,6 +223,21 @@ class ReadRecieptConsumer(AsyncWebsocketConsumer):
             msg.msg_status = MonchatMsg.MsgStatus.READ
             msg.save()
 
+class StatusUpdate(AsyncWebsocketConsumer):
+    async def connect(self):
+        self.room_group_name = self.scope["url_route"]["kwargs"]["chat_id"]
+
+        await self.channel_layer.group_add(self.room_group_name, self.channel_name)
+
+        await self.accept()
+
+    async def receive(self):
+        data = json.loads(text_data)
+
+        await self.channel_layer.group_send(
+            self.room_group_name, {"type": "chat_status_change", **data}
+        )
+        await self.change_msg_status(**data)
 
 # class NotificationConsumer(AsyncWebsocketConsumer):
 #     async def connect(self):

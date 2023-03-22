@@ -235,9 +235,23 @@ class StatusUpdate(AsyncWebsocketConsumer):
         data = json.loads(text_data)
 
         await self.channel_layer.group_send(
-            self.room_group_name, {"type": "chat_status_change", **data}
+            self.room_group_name, {"type": "post_status", **data}
         )
         await self.change_msg_status(**data)
+
+    async def disconnect(self, code):
+        self.channel_layer.group_discard(self.room_group_name, self.channel_name)
+    
+    async def post_status(self, event):
+        await self.send(text_data=json.dumps(event))
+    
+    @database_sync_to_async
+    def save_status(self, **kwargs):
+        pass 
+
+
+
+
 
 # class NotificationConsumer(AsyncWebsocketConsumer):
 #     async def connect(self):

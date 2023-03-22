@@ -133,20 +133,18 @@ class MonchatGroupUpload(models.Model):
 
 
 class StatusPost(models.Model):
-
     class StatusType(models.TextChoice):
         VIDEO = "VIDEO", "VD"
         IMAGE = "IMAGE", "IMG"
         VOICE = "VOICE", "VCE"
 
-    status_id = models.SlugField(
-        max_length=256, unique=True, primary_key=True, default="<status_id>"
-    )
+    status_id = models.SlugField(max_length=256, unique=True, primary_key=True)
     status_file = models.FileField()
     status_type = models.CharField(
         max_length=3, choices=StatusType.choices, default=StatusType.IMAGE
     )
     status_updated = models.DateTimeField(auto_now_add=True)
+
 
 # class ContactedUsers(models.Model):
 #     user_id = models.ForeignKey(

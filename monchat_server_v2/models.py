@@ -91,8 +91,13 @@ class MonchatMsg(models.Model):
 
 
 class MonchatVoiceNotes(models.Model):
+    class NoteStatus(models.TextChoices):
+        READ = "RD", "Read"
+        DELIVERED = "DV", "Delivered"
+        UNDELIVERED = "UD", "Undelivered"
+
     note_id = models.SlugField(max_length=256, unique=True, primary_key=True)
-    note_time = models.DateTimeField(auto_now_add=True)
+    msg_time = models.DateTimeField(auto_now_add=True)
     note_file = models.FileField(upload_to="voiceNotes/%Y/%m/%d/")
     note_sender = models.ForeignKey(
         MonchatUser,
@@ -109,7 +114,9 @@ class MonchatVoiceNotes(models.Model):
         blank=True,
     )
     group_id = models.CharField(max_length=256, default="")
-    # note_status =
+    note_status = models.CharField(
+        max_length=2, choices=NoteStatus.choices, default=NoteStatus.UNDELIVERED
+    )
     read_time = models.DateTimeField(auto_now_add=True)
     read_by = models.ManyToManyField(
         "MonchatUser", related_name="group_voices_played", blank=True

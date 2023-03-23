@@ -10,6 +10,7 @@ from .models import (
     ProfileUpload,
     MonchatGroup,
     MonchatGroupUpload,
+    MonchatVoiceNotes,
 )
 from .utils import (
     generate_id,
@@ -191,6 +192,22 @@ class LatestChats(APIView):
         )
 
 
+class VoiceNotes(APIView):
+    @cors_response
+    def post(self, request, note_sender, note_recipient):
+        note_recipient = MonchatUser.objects.get(user_name=note_recipient)
+        note_sender = MonchatUser.objects.get(user_name=note_sender)
+        noteID = generate_id("voice")
+        voice_data = request.FILES.get("voice")
+        MonchatVoiceNotes.objects.create(
+            note_id=noteID,
+            note_sender=note_sender,
+            note_recipient=note_recipient,
+            note_file=voice_data,
+        )
+        return Response({"msg": "Saved note successfully"}, status=201)
+
+
 class Chats(APIView):
     @cors_response
     def post(self, request, user_name, recipient):
@@ -209,11 +226,16 @@ class Chats(APIView):
     @cors_response
     def get(self, request, user_name, recipient):
         user_data = get_object_or_404(MonchatUser, user_name=user_name)
-        recipient_data = get_object_or_404(MonchatUser, user_name=recipient)
         conversation_list = MonchatMsg.objects.filter(
             Q(msg_sender__user_name=recipient) & Q(msg_recipient__user_name=user_name)
             | Q(msg_recipient__user_name=recipient) & Q(msg_sender__user_name=user_name)
         ).order_by("msg_time")
+
+        voice_notes = MonchatVoiceNotes.objects.filter(
+            Q(msg_sender__user_name=recipient) & Q(msg_recipient__user_name=user_name)
+            | Q(msg_recipient__user_name=recipient) & Q(msg_sender__user_name=user_name)
+        ).order_by("msg_time")
+
         excl = ["msg_date"]
         serializer = map_msg_fields(
             [q for q in json.loads(serializers.serialize("json", conversation_list))],

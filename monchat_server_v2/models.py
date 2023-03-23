@@ -115,7 +115,7 @@ class MonchatGroupUpload(models.Model):
     file_id = models.SlugField(
         max_length=256, unique=True, primary_key=True, default="<file_id>"
     )
-    file = models.FileField(upload_to="%Y/%m/%d/")
+    file = models.FileField(upload_to="profiles/%Y/%m/%d/")
     uploaded_at = models.DateTimeField(auto_now_add=True)
     group_id = models.ForeignKey(
         MonchatGroup,

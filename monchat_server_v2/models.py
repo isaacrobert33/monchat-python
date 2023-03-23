@@ -90,10 +90,6 @@ class MonchatMsg(models.Model):
         return f"<{self.msg_sender}> to <{self.msg_recipient}>"
 
 
-class MonchatVoiceNotes(models.Model):
-    note_id = models.SlugField(max_length=256, unique=True, primary_key=True)
-
-
 class ProfileUpload(models.Model):
     file_id = models.SlugField(
         max_length=256, unique=True, primary_key=True, default="<file_id>"
@@ -143,7 +139,7 @@ class StatusPost(models.Model):
         VOICE = "VOICE", "VCE"
 
     status_id = models.SlugField(max_length=256, unique=True, primary_key=True)
-    status_file = models.FileField()
+    status_file = models.FileField(upload_to="statuses/%Y/%m/%d/")
     status_type = models.CharField(
         max_length=5, choices=StatusType.choices, default=StatusType.IMAGE
     )

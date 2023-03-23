@@ -16,6 +16,7 @@ from .views import (
     SingleGroup,
     GroupMembers,
     GroupChats,
+    VoiceNotes,
 )
 
 app_name = "monchat_server_v2"
@@ -26,6 +27,11 @@ urlpatterns = [
     path("user/<slug:user_id>/", UserData.as_view(), name="user_data"),
     path("latest_chats/<slug:user_id>/", LatestChats.as_view(), name="latest_chats"),
     path("chats/<slug:user_name>/<slug:recipient>/", Chats.as_view(), name="chats"),
+    path(
+        "voice_notes/<slug:note_sender>/<slug:note_recipient>/",
+        VoiceNotes.as_view(),
+        name="voice_notes",
+    ),
     path(
         "group_chats/<slug:group_id>/<slug:user_name>/",
         GroupChats.as_view(),

@@ -124,7 +124,7 @@ class MonchatVoiceNotes(models.Model):
     read_by_time = models.JSONField()
 
     class Meta:
-        ordering = ["note_time"]
+        ordering = ["msg_time"]
 
     def __str__(self) -> str:
         return f"{self.note_sender} 🎤 {self.note_recipient}"

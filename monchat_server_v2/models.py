@@ -90,6 +90,39 @@ class MonchatMsg(models.Model):
         return f"<{self.msg_sender}> to <{self.msg_recipient}>"
 
 
+class MonchatVoiceNotes(models.Model):
+    note_id = models.SlugField(max_length=256, unique=True, primary_key=True)
+    note_time = models.DateTimeField(auto_now_add=True)
+    note_file = models.FileField(upload_to="voiceNotes/%Y/%m/%d/")
+    note_sender = models.ForeignKey(
+        MonchatUser,
+        to_field="user_id",
+        on_delete=models.CASCADE,
+        related_name="voice_notes_sent",
+        blank=True,
+    )
+    note_recipient = models.ForeignKey(
+        MonchatUser,
+        to_field="user_id",
+        on_delete=models.CASCADE,
+        related_name="voice_notes_recieved",
+        blank=True,
+    )
+    group_id = models.CharField(max_length=256, default="")
+    # note_status =
+    read_time = models.DateTimeField(auto_now_add=True)
+    read_by = models.ManyToManyField(
+        "MonchatUser", related_name="group_voices_played", blank=True
+    )
+    read_by_time = models.JSONField()
+
+    class Meta:
+        ordering = ["note_time"]
+
+    def __str__(self) -> str:
+        return f"{self.note_sender} 🎤 {self.note_recipient}"
+
+
 class ProfileUpload(models.Model):
     file_id = models.SlugField(
         max_length=256, unique=True, primary_key=True, default="<file_id>"

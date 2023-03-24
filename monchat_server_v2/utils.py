@@ -182,26 +182,28 @@ def map_msg_fields(
     chat_type="single_chat",
 ) -> list:
     mapped = []
-    msg_data = (
-        sorted(
+
+    # Sort the data if the sort parameter is True
+    if sort:
+        msg_data = sorted(
             msg_data,
             key=lambda x: datetime.fromisoformat(x["fields"]["msg_time"].split(".")[0]),
             reverse=True,
         )
-        if sort
-        else msg_data
-    )
 
     for data in msg_data:
         new_data = data["fields"]
+
+        # Get the recipient data and user icon
         recp_data = MonchatUser.objects.get(user_id=new_data["msg_recipient"])
         recp_user_icon = (
             recp_data.profile.latest("uploaded_at").file.name
             if recp_data.profile.all()
             else "user.svg"
         )
-
         recp_data = serialize_user(recp_data, {"user_icon": recp_user_icon})
+
+        # Format the msg_time and msg_timeago fields
         new_data["msg_time"] = datetime.fromisoformat(
             new_data["msg_time"].split(".")[0]
         )
@@ -210,20 +212,23 @@ def map_msg_fields(
         )
         new_data["msg_date"] = new_data["msg_time"]
         new_data["msg_time"] = new_data["msg_time"].strftime("%H:%M")
+
+        # Get the sender data and user icon
         sender_data = MonchatUser.objects.get(user_id=new_data["msg_sender"])
         sender_user_icon = (
             sender_data.profile.latest("uploaded_at").file.name
             if sender_data.profile.all()
             else "user.svg"
         )
-
         new_data["msg_sender"] = serialize_user(
             sender_data, {"user_icon": sender_user_icon}
         )
 
+        # Set the recipient data and msg_id
         new_data["msg_recipient"] = recp_data
         new_data["msg_id"] = data["pk"]
 
+        # Set the direction field if user_name is provided
         if user_name:
             new_data["direction"] = (
                 "outbound"
@@ -231,13 +236,15 @@ def map_msg_fields(
                 else "inbound"
             )
 
+        # Set the msg_sender and msg_recipient fields to user_name if extra_user_data is False
         if not extra_user_data:
             new_data["msg_sender"] = new_data["msg_sender"]["user_name"]
             new_data["msg_recipient"] = new_data["msg_recipient"]["user_name"]
 
+        # Set the chat_type field
         new_data["type"] = chat_type
 
-        # Removing excluded fields
+        # Remove excluded fields
         for f in excludes:
             new_data.pop(f)
 

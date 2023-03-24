@@ -73,8 +73,9 @@ def user_group_chats(groups, user_id):
     tz = pytz.timezone("UTC")
 
     for group in groups:
-        latest_chat = MonchatMsg.objects.filter(group_id=group.group_id)
-        latest_chat = latest_chat.latest("msg_time") if latest_chat.exists() else None
+        latest_chat = MonchatMsg.objects.filter(group_id=group.group_id).latest(
+            "msg_time"
+        )
         group_json_data = json.loads(serialize("json", [group]))[0]
 
         if latest_chat:
@@ -88,8 +89,9 @@ def user_group_chats(groups, user_id):
                 else "user.svg"
             )
             sender_data = serialize_user(sender_data, {"user_icon": sender_user_icon})
-            if sender_data["user_id"] == user_id:
-                sender_data["user_name"] = "You"
+            sender_data["user_name"] = (
+                "You" if sender_data["user_id"] == user_id else sender_data["user_name"]
+            )
 
             d = {
                 "group_data": {

@@ -232,8 +232,9 @@ class Chats(APIView):
         ).order_by("msg_time")
 
         voice_notes = MonchatVoiceNotes.objects.filter(
-            Q(msg_sender__user_name=recipient) & Q(msg_recipient__user_name=user_name)
-            | Q(msg_recipient__user_name=recipient) & Q(msg_sender__user_name=user_name)
+            Q(note_sender__user_name=recipient) & Q(note_recipient__user_name=user_name)
+            | Q(note_recipient__user_name=recipient)
+            & Q(note_sender__user_name=user_name)
         ).order_by("msg_time")
 
         excl = ["msg_date"]

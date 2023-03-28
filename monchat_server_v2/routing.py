@@ -4,6 +4,7 @@ from .consumers import (
     OnlineStatusConsumer,
     ReadRecieptConsumer,
     GroupConsumer,
+    TypingConsumer,
 )
 
 websocket_urlpatterns = [
@@ -11,4 +12,5 @@ websocket_urlpatterns = [
     path("ws/online/", OnlineStatusConsumer.as_asgi()),
     path("ws/read_reciept/<slug:chat_id>/", ReadRecieptConsumer.as_asgi()),
     path("ws/group/<slug:group_id>/", GroupConsumer.as_asgi()),
+    path("ws/typing/<slug:user_name>/", TypingConsumer.as_asgi()),
 ]

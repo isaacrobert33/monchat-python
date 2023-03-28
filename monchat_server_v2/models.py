@@ -90,6 +90,46 @@ class MonchatMsg(models.Model):
         return f"<{self.msg_sender}> to <{self.msg_recipient}>"
 
 
+class MonchatVoiceNotes(models.Model):
+    class NoteStatus(models.TextChoices):
+        READ = "RD", "Read"
+        DELIVERED = "DV", "Delivered"
+        UNDELIVERED = "UD", "Undelivered"
+
+    note_id = models.SlugField(max_length=256, unique=True, primary_key=True)
+    msg_time = models.DateTimeField(auto_now_add=True)
+    note_file = models.FileField(upload_to="voiceNotes/%Y/%m/%d/")
+    note_sender = models.ForeignKey(
+        MonchatUser,
+        to_field="user_id",
+        on_delete=models.CASCADE,
+        related_name="voice_notes_sent",
+        blank=True,
+    )
+    note_recipient = models.ForeignKey(
+        MonchatUser,
+        to_field="user_id",
+        on_delete=models.CASCADE,
+        related_name="voice_notes_recieved",
+        blank=True,
+    )
+    group_id = models.CharField(max_length=256, default="")
+    note_status = models.CharField(
+        max_length=2, choices=NoteStatus.choices, default=NoteStatus.UNDELIVERED
+    )
+    read_time = models.DateTimeField(auto_now_add=True)
+    read_by = models.ManyToManyField(
+        "MonchatUser", related_name="group_voices_played", blank=True
+    )
+    read_by_time = models.JSONField()
+
+    class Meta:
+        ordering = ["msg_time"]
+
+    def __str__(self) -> str:
+        return f"{self.note_sender} 🎤 {self.note_recipient}"
+
+
 class ProfileUpload(models.Model):
     file_id = models.SlugField(
         max_length=256, unique=True, primary_key=True, default="<file_id>"
@@ -115,7 +155,7 @@ class MonchatGroupUpload(models.Model):
     file_id = models.SlugField(
         max_length=256, unique=True, primary_key=True, default="<file_id>"
     )
-    file = models.FileField(upload_to="%Y/%m/%d/")
+    file = models.FileField(upload_to="profiles/%Y/%m/%d/")
     uploaded_at = models.DateTimeField(auto_now_add=True)
     group_id = models.ForeignKey(
         MonchatGroup,
@@ -133,20 +173,27 @@ class MonchatGroupUpload(models.Model):
 
 
 class StatusPost(models.Model):
-
-    class StatusType(models.TextChoice):
+    class StatusType(models.TextChoices):
         VIDEO = "VIDEO", "VD"
         IMAGE = "IMAGE", "IMG"
         VOICE = "VOICE", "VCE"
 
-    status_id = models.SlugField(
-        max_length=256, unique=True, primary_key=True, default="<status_id>"
-    )
-    status_file = models.FileField()
+    status_id = models.SlugField(max_length=256, unique=True, primary_key=True)
+    status_file = models.FileField(upload_to="statuses/%Y/%m/%d/")
     status_type = models.CharField(
-        max_length=3, choices=StatusType.choices, default=StatusType.IMAGE
+        max_length=5, choices=StatusType.choices, default=StatusType.IMAGE
+    )
+    status_user = models.ForeignKey(
+        MonchatUser,
+        to_field="user_id",
+        on_delete=models.CASCADE,
+        related_name="statuses",
     )
     status_updated = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self) -> str:
+        return f"{self.status}"
+
 
 # class ContactedUsers(models.Model):
 #     user_id = models.ForeignKey(

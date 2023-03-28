@@ -3,9 +3,9 @@ from .models import MonchatMsg
 from .utils import save_msg_to_db
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
-from .models import MonchatUser, MonchatMsg, MonchatGroup
+from .models import MonchatUser, MonchatMsg, MonchatGroup, StatusPost
 from django.db.models import Q
-from .utils import check_members_read
+from .utils import check_members_read, generate_id
 from datetime import datetime
 
 
@@ -248,34 +248,35 @@ class ReadRecieptConsumer(AsyncWebsocketConsumer):
             msg.msg_status = MonchatMsg.MsgStatus.READ
             msg.save()
 
+
 class StatusUpdate(AsyncWebsocketConsumer):
     async def connect(self):
-        self.room_group_name = self.scope["url_route"]["kwargs"]["chat_id"]
+        self.room_group_name = self.scope["url_route"]["kwargs"]["status_id"]
 
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
-
         await self.accept()
 
-    async def receive(self):
+    async def receive(self, text_data=None, bytes_data=None):
         data = json.loads(text_data)
 
         await self.channel_layer.group_send(
             self.room_group_name, {"type": "post_status", **data}
         )
-        await self.change_msg_status(**data)
+        await self.save_status(**data)
 
     async def disconnect(self, code):
         self.channel_layer.group_discard(self.room_group_name, self.channel_name)
-    
+
     async def post_status(self, event):
         await self.send(text_data=json.dumps(event))
-    
+
     @database_sync_to_async
     def save_status(self, **kwargs):
-        pass 
-
-
-
+        fileID = generate_id(prefix="file")
+        status = StatusPost.objects.create(
+            file_id=fileID,
+            # other params
+        )
 
 
 # class NotificationConsumer(AsyncWebsocketConsumer):

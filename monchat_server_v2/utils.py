@@ -73,8 +73,9 @@ def user_group_chats(groups, user_id):
     tz = pytz.timezone("UTC")
 
     for group in groups:
-        latest_chat = MonchatMsg.objects.filter(group_id=group.group_id)
-        latest_chat = latest_chat.latest("msg_time") if latest_chat.exists() else None
+        latest_chat = MonchatMsg.objects.filter(group_id=group.group_id).latest(
+            "msg_time"
+        )
         group_json_data = json.loads(serialize("json", [group]))[0]
 
         if latest_chat:
@@ -88,8 +89,9 @@ def user_group_chats(groups, user_id):
                 else "user.svg"
             )
             sender_data = serialize_user(sender_data, {"user_icon": sender_user_icon})
-            if sender_data["user_id"] == user_id:
-                sender_data["user_name"] = "You"
+            sender_data["user_name"] = (
+                "You" if sender_data["user_id"] == user_id else sender_data["user_name"]
+            )
 
             d = {
                 "group_data": {
@@ -182,26 +184,28 @@ def map_msg_fields(
     chat_type="single_chat",
 ) -> list:
     mapped = []
-    msg_data = (
-        sorted(
+
+    # Sort the data if the sort parameter is True
+    if sort:
+        msg_data = sorted(
             msg_data,
             key=lambda x: datetime.fromisoformat(x["fields"]["msg_time"].split(".")[0]),
             reverse=True,
         )
-        if sort
-        else msg_data
-    )
 
     for data in msg_data:
         new_data = data["fields"]
+
+        # Get the recipient data and user icon
         recp_data = MonchatUser.objects.get(user_id=new_data["msg_recipient"])
         recp_user_icon = (
             recp_data.profile.latest("uploaded_at").file.name
             if recp_data.profile.all()
             else "user.svg"
         )
-
         recp_data = serialize_user(recp_data, {"user_icon": recp_user_icon})
+
+        # Format the msg_time and msg_timeago fields
         new_data["msg_time"] = datetime.fromisoformat(
             new_data["msg_time"].split(".")[0]
         )
@@ -210,20 +214,23 @@ def map_msg_fields(
         )
         new_data["msg_date"] = new_data["msg_time"]
         new_data["msg_time"] = new_data["msg_time"].strftime("%H:%M")
+
+        # Get the sender data and user icon
         sender_data = MonchatUser.objects.get(user_id=new_data["msg_sender"])
         sender_user_icon = (
             sender_data.profile.latest("uploaded_at").file.name
             if sender_data.profile.all()
             else "user.svg"
         )
-
         new_data["msg_sender"] = serialize_user(
             sender_data, {"user_icon": sender_user_icon}
         )
 
+        # Set the recipient data and msg_id
         new_data["msg_recipient"] = recp_data
         new_data["msg_id"] = data["pk"]
 
+        # Set the direction field if user_name is provided
         if user_name:
             new_data["direction"] = (
                 "outbound"
@@ -231,13 +238,15 @@ def map_msg_fields(
                 else "inbound"
             )
 
+        # Set the msg_sender and msg_recipient fields to user_name if extra_user_data is False
         if not extra_user_data:
             new_data["msg_sender"] = new_data["msg_sender"]["user_name"]
             new_data["msg_recipient"] = new_data["msg_recipient"]["user_name"]
 
+        # Set the chat_type field
         new_data["type"] = chat_type
 
-        # Removing excluded fields
+        # Remove excluded fields
         for f in excludes:
             new_data.pop(f)
 
@@ -252,6 +261,7 @@ def get_hexdigest(algorithm, salt, raw_password):
     using the given algorithm ('md5', 'sha1' or 'crypt').
     """
     raw_password, salt = smart_str(raw_password), smart_str(salt)
+
     if algorithm == "crypt":
         try:
             import crypt
@@ -262,7 +272,7 @@ def get_hexdigest(algorithm, salt, raw_password):
         return crypt.crypt(raw_password, salt)
 
     if algorithm == "md5":
-        return hashlib.md5(salt + raw_password).hexdigest()
+        return hashlib.md5(salt.encode() + raw_password.encode()).hexdigest()
     elif algorithm == "sha1":
         return hashlib.sha1(salt.encode() + raw_password.encode()).hexdigest()
     raise ValueError("Got unknown password algorithm type in password.")
@@ -341,13 +351,10 @@ def get_chat_socket_id(msg_sender, msg_recipient):
 def map_unread_count(data: list, user_id, group=False):
     mapped = []
 
-    if group:
-        for msg in data:
+    for msg in data:
+        if group:
             unread_count = MonchatMsg.objects.filter(read_by__user_id=user_id).count()
-            msg["unread_count"] = unread_count
-            mapped.append(msg)
-    else:
-        for msg in data:
+        else:
             recp = (
                 msg["msg_sender"]["user_id"]
                 if msg["direction"] == "inbound"
@@ -359,8 +366,8 @@ def map_unread_count(data: list, user_id, group=False):
                 msg_sender__user_id=recp,
                 msg_recipient__user_id=user_id,
             ).count()
-            msg["unread_count"] = unread_count
-            mapped.append(msg)
+        msg["unread_count"] = unread_count
+        mapped.append(msg)
 
     return mapped
 

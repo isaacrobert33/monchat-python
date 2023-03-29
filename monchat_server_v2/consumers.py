@@ -102,6 +102,7 @@ class GroupConsumer(AsyncWebsocketConsumer):
         except:
             print(traceback.format_exc())
 
+
 class TypingConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.room_group_name = "typing"
@@ -111,7 +112,8 @@ class TypingConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data=None, bytes_data=None):
         data = json.loads(text_data)
-        
+        connection_type = data["c_type"]
+
         await self.channel_layer.group_send(
             self.room_group_name,
             {
@@ -121,7 +123,7 @@ class TypingConsumer(AsyncWebsocketConsumer):
             },
         )
 
-    async def user_typing(self, text_data):
+    async def user_typing(self, event):
         await self.send(text_data=json.dumps(event))
 
     async def disconnect(self, message):

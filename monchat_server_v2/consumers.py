@@ -112,14 +112,13 @@ class TypingConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data=None, bytes_data=None):
         data = json.loads(text_data)
-        connection_type = data["c_type"]
 
         await self.channel_layer.group_send(
             self.room_group_name,
             {
                 "type": "user_typing",
                 "user_name": data["user_name"],
-                "typing_status": True if connection_type == "open" else False,
+                "typing": data["typing"],
             },
         )
 

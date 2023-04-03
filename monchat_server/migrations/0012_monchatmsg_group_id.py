@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
                 default=monchat_server.models.MonchatGroup,
                 on_delete=django.db.models.deletion.CASCADE,
                 related_name="group",
-                to="monchat_server_v2.monchatgroup",
+                to="monchat_server.monchatgroup",
             ),
         ),
     ]

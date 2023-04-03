@@ -26,7 +26,7 @@ class Migration(migrations.Migration):
                 (
                     "admins",
                     models.ManyToManyField(
-                        related_name="group_admin", to="monchat_server_v2.monchatuser"
+                        related_name="group_admin", to="monchat_server.monchatuser"
                     ),
                 ),
                 (
@@ -34,13 +34,13 @@ class Migration(migrations.Migration):
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
                         related_name="groups_created",
-                        to="monchat_server_v2.monchatuser",
+                        to="monchat_server.monchatuser",
                     ),
                 ),
                 (
                     "members",
                     models.ManyToManyField(
-                        related_name="group_member", to="monchat_server_v2.monchatuser"
+                        related_name="group_member", to="monchat_server.monchatuser"
                     ),
                 ),
             ],

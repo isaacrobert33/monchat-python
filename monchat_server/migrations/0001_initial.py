@@ -5,34 +5,67 @@ import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='MonchatUser',
+            name="MonchatUser",
             fields=[
-                ('user_id', models.SlugField(max_length=256, primary_key=True, serialize=False, unique=True)),
-                ('user_name', models.CharField(max_length=256)),
-                ('user_icon', models.CharField(max_length=356)),
-                ('password', models.TextField(default='<no-password>', max_length=256)),
+                (
+                    "user_id",
+                    models.SlugField(
+                        max_length=256, primary_key=True, serialize=False, unique=True
+                    ),
+                ),
+                ("user_name", models.CharField(max_length=256)),
+                ("user_icon", models.CharField(max_length=356)),
+                ("password", models.TextField(default="<no-password>", max_length=256)),
             ],
         ),
         migrations.CreateModel(
-            name='MonchatMsg',
+            name="MonchatMsg",
             fields=[
-                ('msg_id', models.SlugField(max_length=256, primary_key=True, serialize=False, unique=True)),
-                ('msg_body', models.TextField()),
-                ('msg_time', models.DateTimeField(auto_now_add=True)),
-                ('msg_status', models.CharField(choices=[('RD', 'Read'), ('DV', 'Delivered'), ('UD', 'Undelivered')], default='UD', max_length=2)),
-                ('msg_recipient', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='msg_received', to='monchat_server_v2.monchatuser')),
-                ('msg_sender', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='msg_sent', to='monchat_server_v2.monchatuser')),
+                (
+                    "msg_id",
+                    models.SlugField(
+                        max_length=256, primary_key=True, serialize=False, unique=True
+                    ),
+                ),
+                ("msg_body", models.TextField()),
+                ("msg_time", models.DateTimeField(auto_now_add=True)),
+                (
+                    "msg_status",
+                    models.CharField(
+                        choices=[
+                            ("RD", "Read"),
+                            ("DV", "Delivered"),
+                            ("UD", "Undelivered"),
+                        ],
+                        default="UD",
+                        max_length=2,
+                    ),
+                ),
+                (
+                    "msg_recipient",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="msg_received",
+                        to="monchat_server.monchatuser",
+                    ),
+                ),
+                (
+                    "msg_sender",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="msg_sent",
+                        to="monchat_server.monchatuser",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['msg_time'],
+                "ordering": ["msg_time"],
             },
         ),
     ]

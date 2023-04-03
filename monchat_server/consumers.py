@@ -30,6 +30,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def chat_message(self, event):
         await self.send(text_data=json.dumps(event))
 
+    async def single_chat(self, event):
+        await self.send(text_data=json.dumps(event))
+
+    async def group_chat(self, event):
+        await self.send(text_data=json.dumps(event))
+
     async def disconnect(self, code):
         self.channel_layer.group_discard(self.room_group_name, self.channel_name)
 

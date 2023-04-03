@@ -20,6 +20,6 @@ from django.conf.urls.static import static
 
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('monchat/', include("monchat_server_v2.urls", namespace="monchat_server_v2")),
+    path("admin/", admin.site.urls),
+    path("monchat/", include("monchat_server.urls", namespace="monchat_server")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

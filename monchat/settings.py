@@ -49,7 +49,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "monchat_server_v2.apps.MonchatServerV2Config",
+    "monchat_server.apps.MonchatServerConfig",
     "rest_framework",
     "channels",
     "corsheaders",

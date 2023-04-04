@@ -89,13 +89,13 @@ CHANNEL_LAYERS = {
         "BACKEND": "channels_redis_contrib.core.RedisChannelLayer",
         "CONFIG": {
             "hosts": [
-                # (
-                #     os.getenv("REDIS_HOST"),
-                #     16280,
-                # ),
-                ("127.0.0.1", 6379),
+                (
+                    os.getenv("REDIS_HOST"),
+                    16280,
+                ),
+                # ("127.0.0.1", 6379),
             ],
-            # "password": os.getenv("REDIS_PASSWORD"),
+            "password": os.getenv("REDIS_PASSWORD"),
         },
     },
 }

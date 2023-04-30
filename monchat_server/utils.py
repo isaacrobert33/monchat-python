@@ -278,14 +278,14 @@ def get_hexdigest(algorithm, salt, raw_password):
     raise ValueError("Got unknown password algorithm type in password.")
 
 
-def hash_password(raw_password):
+def hash_password(raw_password: str):
     algo = "sha1"
     salt = get_hexdigest(algo, str(random.random()), str(random.random()))[:5]
     hsh = get_hexdigest(algo, salt, raw_password)
     return "%s$%s$%s" % (algo, salt, hsh)
 
 
-def check_password(raw_password, enc_password):
+def check_password(raw_password: str, enc_password: str):
     """
     Returns a boolean of whether the raw_password was correct. Handles
     encryption formats behind the scenes.
@@ -304,7 +304,7 @@ def cors_response(func):
     return wrapper
 
 
-def update_msg_status(msg_sender, msg_recipient, msg_time):
+def update_msg_status(msg_sender: str, msg_recipient: str, msg_time):
     msgs = MonchatMsg.objects.filter(
         Q(msg_status=MonchatMsg.MsgStatus.UNDELIVERED)
         | Q(msg_status=MonchatMsg.MsgStatus.DELIVERED),
@@ -319,7 +319,7 @@ def update_msg_status(msg_sender, msg_recipient, msg_time):
     return True
 
 
-def save_msg_to_db(msg_body, msg_sender, msg_recipient, msg_time):
+def save_msg_to_db(msg_body: str, msg_sender: str, msg_recipient: str, msg_time):
     new_msg_id = generate_id(prefix="chat")
     msg_recipient = MonchatUser.objects.get(user_name=msg_recipient.strip("'"))
     msg_sender = MonchatUser.objects.get(user_name=msg_sender.strip("'"))
@@ -343,12 +343,12 @@ def save_msg_to_db(msg_body, msg_sender, msg_recipient, msg_time):
     return True
 
 
-def get_chat_socket_id(msg_sender, msg_recipient):
+def get_chat_socket_id(msg_sender: str, msg_recipient: str):
     socket_id = "__".join(sorted([msg_sender, msg_recipient]))
     return socket_id
 
 
-def map_unread_count(data: list, user_id, group=False):
+def map_unread_count(data: list, user_id: str, group: bool=False):
     mapped = []
 
     for msg in data:
@@ -372,6 +372,6 @@ def map_unread_count(data: list, user_id, group=False):
     return mapped
 
 
-def check_members_read(msg_data, group_id):
+def check_members_read(msg_data: str, group_id: str):
     group = MonchatGroup.objects.get(group_id=group_id)
     return msg_data.read_by.count() == group.members.count()

@@ -91,8 +91,8 @@ CHANNEL_LAYERS = {
         "CONFIG": {
             "hosts": [
                 (
+                    os.getenv("REDIS_ENDPOINT"),
                     os.getenv("REDIS_HOST"),
-                    16280,
                 ),
                 # ("127.0.0.1", 6379),
             ],

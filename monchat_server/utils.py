@@ -1,5 +1,4 @@
 from datetime import datetime
-from .models import MonchatUser, MonchatMsg, MonchatGroup
 from django.core.serializers import serialize
 from django.db.models import Q
 from django.utils.encoding import smart_str
@@ -39,6 +38,8 @@ def serialize_group(queryset: list, single=False):
 
 
 def map_group_unread_count(group_chat, user_id):
+    from .models import MonchatMsg
+
     grp = MonchatMsg.objects.exclude(read_by__user_id=user_id).filter(
         group_id=group_chat["group_id"]
     )
@@ -69,6 +70,8 @@ def sort_chats(chats: list, user_id, date_format="iso") -> list:
 
 
 def user_group_chats(groups, user_id):
+    from .models import MonchatUser, MonchatMsg
+
     chats = []
     tz = pytz.timezone("UTC")
 
@@ -183,6 +186,8 @@ def map_msg_fields(
     extra_user_data=True,
     chat_type="single_chat",
 ) -> list:
+    from .models import MonchatUser
+
     mapped = []
 
     # Sort the data if the sort parameter is True
@@ -305,6 +310,8 @@ def cors_response(func):
 
 
 def update_msg_status(msg_sender: str, msg_recipient: str, msg_time):
+    from .models import MonchatMsg
+
     msgs = MonchatMsg.objects.filter(
         Q(msg_status=MonchatMsg.MsgStatus.UNDELIVERED)
         | Q(msg_status=MonchatMsg.MsgStatus.DELIVERED),
@@ -320,6 +327,8 @@ def update_msg_status(msg_sender: str, msg_recipient: str, msg_time):
 
 
 def save_msg_to_db(msg_body: str, msg_sender: str, msg_recipient: str, msg_time):
+    from .models import MonchatUser, MonchatMsg
+
     new_msg_id = generate_id(prefix="chat")
     msg_recipient = MonchatUser.objects.get(user_name=msg_recipient.strip("'"))
     msg_sender = MonchatUser.objects.get(user_name=msg_sender.strip("'"))
@@ -348,7 +357,9 @@ def get_chat_socket_id(msg_sender: str, msg_recipient: str):
     return socket_id
 
 
-def map_unread_count(data: list, user_id: str, group: bool=False):
+def map_unread_count(data: list, user_id: str, group: bool = False):
+    from .models import MonchatMsg
+
     mapped = []
 
     for msg in data:
@@ -373,5 +384,7 @@ def map_unread_count(data: list, user_id: str, group: bool=False):
 
 
 def check_members_read(msg_data: str, group_id: str):
+    from .models import MonchatGroup
+
     group = MonchatGroup.objects.get(group_id=group_id)
     return msg_data.read_by.count() == group.members.count()

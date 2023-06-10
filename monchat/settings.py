@@ -21,7 +21,7 @@ load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-MEDIA_ROOT = "./static/profile_assets/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "static/profile_assets/")
 MEDIA_URL = "/media/"
 
 # Quick-start development settings - unsuitable for production
@@ -31,7 +31,7 @@ MEDIA_URL = "/media/"
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
 CORS_ALLOWED_ORIGINS = [
@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "channels",
     "corsheaders",
+    "daphne",
 ]
 
 MIDDLEWARE = [

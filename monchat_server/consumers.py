@@ -1,9 +1,6 @@
 import json, traceback, pytz
-from .models import MonchatMsg
-from .utils import save_msg_to_db
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
-from .models import MonchatUser, MonchatMsg, MonchatGroup, StatusPost
 from django.db.models import Q
 from .utils import check_members_read, generate_id
 from datetime import datetime
@@ -43,6 +40,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
     def save_msg_to_db(
         self, msg_id, msg_body, msg_sender, msg_recipient, msg_time, **kwargs
     ):
+        from .models import MonchatUser, MonchatMsg
+
         tz = pytz.timezone("UTC")
         msg_recipient = MonchatUser.objects.get(user_name=msg_recipient.strip("'"))
         msg_sender = MonchatUser.objects.get(user_name=msg_sender.strip("'"))
@@ -91,6 +90,8 @@ class GroupConsumer(AsyncWebsocketConsumer):
     def save_msg_to_db(
         self, msg_id, msg_body, msg_sender, group_id, msg_time, **kwargs
     ):
+        from .models import MonchatUser, MonchatMsg
+
         msg_sender = MonchatUser.objects.get(user_name=msg_sender.strip("'"))
         msg_time = datetime.fromisoformat(msg_time.split(".")[0])
 
@@ -178,8 +179,9 @@ class OnlineStatusConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def change_online_status(self, user_name, c_type, time=None):
+        from .models import MonchatUser
+
         userprofile = MonchatUser.objects.get(user_name=user_name)
-        print(user_name, c_type, time)
 
         if c_type == "open":
             userprofile.online_status = True
@@ -242,6 +244,8 @@ class ReadRecieptConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def change_msg_status(self, msg_id, msg_status, read_time, **kwargs):
+        from .models import MonchatUser, MonchatMsg
+
         msg_data = MonchatMsg.objects.get(msg_id=msg_id)
         msg_data.read_time = datetime.fromisoformat(read_time.split(".")[0])
 
@@ -266,6 +270,8 @@ class ReadRecieptConsumer(AsyncWebsocketConsumer):
             )
 
     def update_msg_status(self, msg_sender, msg_recipient, msg_time):
+        from .models import MonchatMsg
+
         msgs = MonchatMsg.objects.filter(
             Q(msg_status=MonchatMsg.MsgStatus.UNDELIVERED)
             | Q(msg_status=MonchatMsg.MsgStatus.DELIVERED),
@@ -301,6 +307,8 @@ class StatusUpdate(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def save_status(self, **kwargs):
+        from .models import StatusPost
+
         fileID = generate_id(prefix="file")
         status = StatusPost.objects.create(
             file_id=fileID,
